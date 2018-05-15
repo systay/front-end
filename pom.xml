@@ -12,6 +12,7 @@
   <inceptionYear>2002-2018</inceptionYear>
 
   <properties>
+    <license.magic>build/licensing-requirements-frontend.xml</license.magic>
     <licensing.prepend.text>notice-asl-prefix.txt</licensing.prepend.text>
     <license-text.header>build/ASL-2-header.txt</license-text.header>
     <scala.version>2.11.12</scala.version>
@@ -234,7 +235,7 @@
             </goals>
             <configuration>
               <licensingRequirementFiles>
-                <licensingRequirementFile>../licensing-requirements-base.xml</licensingRequirementFile>
+                <licensingRequirementFile>${license.magic}</licensingRequirementFile>
               </licensingRequirementFiles>
               <thirdPartyLicensingFilename>${project.artifactId}-${project.version}-NOTICE.txt
               </thirdPartyLicensingFilename>
