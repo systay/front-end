@@ -12,9 +12,7 @@
   <inceptionYear>2002-2018</inceptionYear>
 
   <properties>
-    <license.magic>build/licensing-requirements-frontend.xml</license.magic>
-    <licensing.prepend.text>notice-asl-prefix.txt</licensing.prepend.text>
-    <license-text.header>build/ASL-2-header.txt</license-text.header>
+    <licensing.prepend.text>ASL-2-header.txt</licensing.prepend.text>
     <scala.version>2.11.12</scala.version>
     <scala.binary.version>2.11</scala.binary.version>
     <scala.target.vm>1.8</scala.target.vm>
@@ -37,6 +35,7 @@
   </licenses>
 
   <modules>
+    <module>build</module>
     <module>ast</module>
     <module>rewriting</module>
     <module>parser</module>
@@ -51,12 +50,6 @@
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
       <version>${scala.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>annotations</artifactId>
-      <version>3.0.1</version>
     </dependency>
 
     <!-- shared java test dependencies -->
@@ -235,7 +228,7 @@
             </goals>
             <configuration>
               <licensingRequirementFiles>
-                <licensingRequirementFile>${license.magic}</licensingRequirementFile>
+                <licensingRequirementFile>licensing-requirements-frontend.xml</licensingRequirementFile>
               </licensingRequirementFiles>
               <thirdPartyLicensingFilename>${project.artifactId}-${project.version}-NOTICE.txt
               </thirdPartyLicensingFilename>
@@ -248,9 +241,9 @@
         </executions>
         <dependencies>
           <dependency>
-            <groupId>org.neo4j.build</groupId>
-            <artifactId>licensecheck-config</artifactId>
-            <version>3.4.0</version>
+            <groupId>org.opencypher</groupId>
+            <artifactId>licensing-config</artifactId>
+            <version>${project.version}</version>
           </dependency>
         </dependencies>
       </plugin>
