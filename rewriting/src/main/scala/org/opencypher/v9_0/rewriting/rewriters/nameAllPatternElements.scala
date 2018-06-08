@@ -15,21 +15,21 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.expressions.{RelationshipPattern, Variable}
-import org.opencypher.v9_0.util.{Rewriter, UnNamedNameGenerator, bottomUp}
 import org.opencypher.v9_0.expressions.{NodePattern, RelationshipPattern, Variable}
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
+import org.opencypher.v9_0.util.{Rewriter, UnNamedNameGenerator, bottomUp}
 
-case object nameAllPatternElements extends Rewriter {
+case class nameAllPatternElements(attributes: Attributes) extends Rewriter {
 
-  override def apply(in: AnyRef): AnyRef = namingRewriter.apply(in)
-
-  val namingRewriter: Rewriter = bottomUp(Rewriter.lift {
+  private val namingRewriter: Rewriter = bottomUp(Rewriter.lift {
     case pattern: NodePattern if pattern.variable.isEmpty =>
       val syntheticName = UnNamedNameGenerator.name(pattern.position.bumped())
-      pattern.copy(variable = Some(Variable(syntheticName)(pattern.position)))(pattern.position)
+      pattern.copy(variable = Some(Variable(syntheticName)(pattern.position)(attributes.copy(pattern.id))))(pattern.position)(SameId(pattern.id))
 
-    case pattern: RelationshipPattern if pattern.variable.isEmpty  =>
+    case pattern: RelationshipPattern if pattern.variable.isEmpty =>
       val syntheticName = UnNamedNameGenerator.name(pattern.position.bumped())
-      pattern.copy(variable = Some(Variable(syntheticName)(pattern.position)))(pattern.position)
+      pattern.copy(variable = Some(Variable(syntheticName)(pattern.position)(attributes.copy(pattern.id))))(pattern.position)(SameId(pattern.id))
   })
+
+  override def apply(in: AnyRef): AnyRef = namingRewriter.apply(in)
 }

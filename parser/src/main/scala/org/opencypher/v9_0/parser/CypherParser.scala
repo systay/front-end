@@ -16,21 +16,22 @@
 package org.opencypher.v9_0.parser
 
 import org.opencypher.v9_0.ast
+import org.opencypher.v9_0.util.attribution.{Attributes, IdGen}
 import org.opencypher.v9_0.util.{InputPosition, SyntaxException}
 import org.parboiled.scala._
 
-class CypherParser extends Parser
+class CypherParser(attributes: Attributes) extends Parser
   with Statement
   with Expressions {
 
+  override implicit val idGen: IdGen = attributes.idGen
 
   @throws(classOf[SyntaxException])
   def parse(queryText: String, offset: Option[InputPosition] = None): ast.Statement =
-    parseOrThrow(queryText, offset, CypherParser.Statements)
-}
+    parseOrThrow(queryText, offset, statements)
 
-object CypherParser extends Parser with Statement with Expressions {
-  val Statements: Rule1[Seq[ast.Statement]] = rule {
+  private val statements: Rule1[Seq[ast.Statement]] = rule {
     oneOrMore(WS ~ Statement ~ WS, separator = ch(';')) ~~ optional(ch(';')) ~~ EOI.label("end of input")
   }
+
 }

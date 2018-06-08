@@ -17,6 +17,7 @@ package org.opencypher.v9_0.ast
 
 import org.opencypher.v9_0.ast.semantics.{SemanticAnalysisTooling, SemanticCheck, SemanticState}
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 
 
 sealed trait CatalogDDL extends Statement with SemanticAnalysisTooling {
@@ -30,12 +31,12 @@ sealed trait CatalogDDL extends Statement with SemanticAnalysisTooling {
 
 object CreateGraph {
   // Ignore the periodicCommitHint
-  def apply(graphName: QualifiedGraphName, query: Query)(position: InputPosition): CreateGraph =
+  def apply(graphName: QualifiedGraphName, query: Query)(position: InputPosition)(implicit idGen: IdGen): CreateGraph =
     CreateGraph(graphName, query.part)(position)
 }
 
 final case class CreateGraph(graphName: QualifiedGraphName, query: QueryPart)
-                            (val position: InputPosition) extends CatalogDDL {
+                            (val position: InputPosition)(implicit override val idGen: IdGen) extends CatalogDDL {
 
   override def name = "CREATE GRAPH"
 
@@ -45,7 +46,7 @@ final case class CreateGraph(graphName: QualifiedGraphName, query: QueryPart)
       query.semanticCheck
 }
 
-final case class DeleteGraph(graphName: QualifiedGraphName)(val position: InputPosition) extends CatalogDDL {
+final case class DeleteGraph(graphName: QualifiedGraphName)(val position: InputPosition)(implicit override val idGen: IdGen) extends CatalogDDL {
 
   override def name = "DELETE GRAPH"
 

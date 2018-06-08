@@ -15,12 +15,12 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.ast.semantics.{SemanticCheck, SemanticExpressionCheck}
-import org.opencypher.v9_0.util.{ASTNode, InputPosition}
-import org.opencypher.v9_0.ast.semantics.{SemanticCheckable, SemanticExpressionCheck}
+import org.opencypher.v9_0.ast.semantics.{SemanticCheck, SemanticCheckable, SemanticExpressionCheck}
 import org.opencypher.v9_0.expressions.Variable
+import org.opencypher.v9_0.util.attribution.IdGen
+import org.opencypher.v9_0.util.{ASTNode, InputPosition}
 
-final case class GraphRef(name: Variable)(val position: InputPosition)
+final case class GraphRef(name: Variable)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends ASTNode with SemanticCheckable {
 
   override def semanticCheck: SemanticCheck =

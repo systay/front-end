@@ -19,7 +19,7 @@ object ConstantExpression {
   def unapply(v: AnyRef): Option[Expression] = v match {
     case expr: Literal => Some(expr)
     case expr: Parameter => Some(expr)
-    case expr@ListLiteral(expressions) if expressions.forall(unapply(_).nonEmpty) => Some(expr)
+    case expr: ListLiteral if expr.expressions.forall(unapply(_).nonEmpty) => Some(expr)
     case _ => None
   }
 }

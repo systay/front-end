@@ -15,12 +15,13 @@
  */
 package org.opencypher.v9_0.ast
 
+import org.opencypher.v9_0.ast.semantics.{SemanticCheckable, SemanticExpressionCheck}
 import org.opencypher.v9_0.expressions.Expression
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.{ASTNode, InputPosition}
-import org.opencypher.v9_0.ast.semantics.{SemanticCheckable, SemanticExpressionCheck}
 
-case class Where(expression: Expression)(val position: InputPosition)
+case class Where(expression: Expression)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends ASTNode with SemanticCheckable {
 
   def dependencies = expression.dependencies

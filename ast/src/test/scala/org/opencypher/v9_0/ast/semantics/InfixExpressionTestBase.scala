@@ -16,9 +16,10 @@
 package org.opencypher.v9_0.ast.semantics
 
 import org.opencypher.v9_0.expressions.{DummyExpression, Expression}
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.symbols._
 
-abstract class InfixExpressionTestBase(ctr: (Expression, Expression) => Expression) extends SemanticFunSuite {
+abstract class InfixExpressionTestBase(ctr: (Expression, Expression, IdGen) => Expression) extends SemanticFunSuite {
 
   protected def testValidTypes(lhsTypes: TypeSpec, rhsTypes: TypeSpec)(expected: TypeSpec) {
     val (result, expression) = evaluateWithTypes(lhsTypes, rhsTypes)
@@ -33,10 +34,12 @@ abstract class InfixExpressionTestBase(ctr: (Expression, Expression) => Expressi
   }
 
   protected def evaluateWithTypes(lhsTypes: TypeSpec, rhsTypes: TypeSpec): (SemanticCheckResult, Expression) = {
+    implicit val idGen = new SequentialIdGen()
+
     val lhs = DummyExpression(lhsTypes)
     val rhs = DummyExpression(rhsTypes)
 
-    val expression = ctr(lhs, rhs)
+    val expression = ctr(lhs, rhs, idGen)
 
     val state = SemanticExpressionCheck.simple(Seq(lhs, rhs))(SemanticState.clean).state
     (SemanticExpressionCheck.simple(expression)(state), expression)

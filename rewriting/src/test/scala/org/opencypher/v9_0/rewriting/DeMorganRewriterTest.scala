@@ -17,11 +17,12 @@ package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.rewriting.rewriters.deMorganRewriter
 import org.opencypher.v9_0.util.Rewriter
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class DeMorganRewriterTest extends CypherFunSuite with PredicateTestSupport {
 
-  val rewriter: Rewriter = deMorganRewriter()(mock[AstRewritingMonitor])
+  val rewriter: Rewriter = deMorganRewriter(Attributes(idGen))(mock[AstRewritingMonitor])
 
   test("not (P and Q)  iff  (not P) or (not Q)") {
     not(and(P, Q)) <=> or(not(P), not(Q))

@@ -16,10 +16,11 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.symbols._
 
 case class Parameter(name: String,
-                     parameterType: CypherType)(val position: InputPosition)
+                     parameterType: CypherType)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends Expression {
 
   override def asCanonicalStringVal: String = s"{$name}"

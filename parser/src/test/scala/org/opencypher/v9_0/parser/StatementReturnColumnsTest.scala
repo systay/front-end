@@ -18,11 +18,11 @@ package org.opencypher.v9_0.parser
 import org.opencypher.v9_0.ast
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
-class StatementReturnColumnsTest extends CypherFunSuite with ParserTest[ast.Statement, List[String]] {
+class StatementReturnColumnsTest extends CypherFunSuite with ParserTest[ast.Statement, List[String]] with Statement {
 
   override def convert(statement: ast.Statement): List[String] = statement.returnColumns
 
-  implicit val parserToTest = CypherParser.Statement
+  implicit val parserToTest = Statement
 
   test("MATCH ... RETURN ...") {
     parsing("MATCH (n) RETURN n, n.prop AS m") shouldGive List("n", "m")

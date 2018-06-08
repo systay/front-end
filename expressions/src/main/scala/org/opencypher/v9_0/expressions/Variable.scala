@@ -16,8 +16,9 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 
-case class Variable(name: String)(val position: InputPosition) extends LogicalVariable {
+case class Variable(name: String)(val position: InputPosition)(implicit override val idGen: IdGen) extends LogicalVariable {
 
   override def copyId: Variable = copy()(position)
 

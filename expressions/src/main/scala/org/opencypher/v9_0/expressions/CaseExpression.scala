@@ -16,12 +16,13 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 
 case class CaseExpression(
                            expression: Option[Expression],
                            alternatives: IndexedSeq[(Expression, Expression)],
                            default: Option[Expression]
-                         )(val position: InputPosition) extends Expression {
+                         )(val position: InputPosition)(implicit override val idGen: IdGen) extends Expression {
 
   lazy val possibleExpressions: IndexedSeq[Expression] = alternatives.map(_._2) ++ default
 
@@ -32,6 +33,6 @@ object CaseExpression {
              expression: Option[Expression],
              alternatives: List[(Expression, Expression)],
              default: Option[Expression]
-           )(position: InputPosition):CaseExpression =
+           )(position: InputPosition)(implicit idGen: IdGen) :CaseExpression =
     CaseExpression(expression, alternatives.toIndexedSeq, default)(position)
 }

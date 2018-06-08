@@ -15,13 +15,14 @@
  */
 package org.opencypher.v9_0.rewriting
 
+import org.opencypher.v9_0.ast.SequentialIds
+import org.opencypher.v9_0.expressions.Parameter
 import org.opencypher.v9_0.rewriting.rewriters.{Forced, IfNoParameter, LiteralExtraction, literalReplacement}
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
-import org.opencypher.v9_0.expressions.Parameter
 
-class LiteralReplacementTest extends CypherFunSuite  {
+class LiteralReplacementTest extends CypherFunSuite with SequentialIds {
 
   import org.opencypher.v9_0.parser.ParserFixture.parser
 

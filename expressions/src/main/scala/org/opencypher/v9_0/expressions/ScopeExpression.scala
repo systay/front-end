@@ -16,6 +16,7 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 
 // Scope expressions bundle together variables of a new scope
 // together with any child expressions that get evaluated in a context where
@@ -30,14 +31,20 @@ trait ScopeExpression extends Expression {
   def introducedVariables: Set[LogicalVariable]
 }
 
-case class FilterScope(variable: LogicalVariable, innerPredicate: Option[Expression])(val position: InputPosition) extends ScopeExpression {
+case class FilterScope(variable: LogicalVariable, innerPredicate: Option[Expression])
+                      (val position: InputPosition)
+                      (implicit override val idGen: IdGen) extends ScopeExpression {
   val introducedVariables = Set(variable)
 }
 
-case class ExtractScope(variable: LogicalVariable, innerPredicate: Option[Expression], extractExpression: Option[Expression])(val position: InputPosition) extends ScopeExpression {
+case class ExtractScope(variable: LogicalVariable, innerPredicate: Option[Expression], extractExpression: Option[Expression])
+                       (val position: InputPosition)
+                       (implicit override val idGen: IdGen) extends ScopeExpression {
   val introducedVariables = Set(variable)
 }
 
-case class ReduceScope(accumulator: LogicalVariable, variable: LogicalVariable, expression: Expression)(val position: InputPosition) extends ScopeExpression {
+case class ReduceScope(accumulator: LogicalVariable, variable: LogicalVariable, expression: Expression)
+                      (val position: InputPosition)
+                      (implicit override val idGen: IdGen) extends ScopeExpression {
   val introducedVariables = Set(accumulator, variable)
 }

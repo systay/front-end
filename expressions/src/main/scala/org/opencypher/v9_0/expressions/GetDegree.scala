@@ -16,9 +16,10 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 
 case class GetDegree(
                       node: Expression,
                       relType: Option[RelTypeName],
                       dir: SemanticDirection
-                    )(val position: InputPosition) extends Expression
+                    )(val position: InputPosition)(implicit override val idGen: IdGen) extends Expression

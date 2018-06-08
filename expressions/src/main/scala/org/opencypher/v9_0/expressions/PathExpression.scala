@@ -16,6 +16,7 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.Rewritable._
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.{Foldable, InputPosition, Rewritable}
 
 sealed trait PathStep extends Product with Foldable with Rewritable {
@@ -53,4 +54,4 @@ case object NilPathStep extends PathStep {
   def dependencies = Set.empty[Expression]
 }
 
-case class PathExpression(step: PathStep)(val position: InputPosition) extends Expression
+case class PathExpression(step: PathStep)(val position: InputPosition)(implicit override val idGen: IdGen) extends Expression

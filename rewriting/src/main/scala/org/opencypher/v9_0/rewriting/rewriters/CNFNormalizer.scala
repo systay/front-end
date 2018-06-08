@@ -16,25 +16,29 @@
 package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.expressions._
-import org.opencypher.v9_0.util.Foldable._
-import org.opencypher.v9_0.util.helpers.fixedPoint
-import org.opencypher.v9_0.util.{Rewriter, bottomUp, inSequence, topDown}
-import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.expressions.functions.Exists
 import org.opencypher.v9_0.rewriting.AstRewritingMonitor
+import org.opencypher.v9_0.util.Foldable._
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
+import org.opencypher.v9_0.util.helpers.fixedPoint
+import org.opencypher.v9_0.util.{Rewriter, bottomUp, inSequence, topDown}
 
 
-case class deMorganRewriter()(implicit monitor: AstRewritingMonitor) extends Rewriter {
+case class deMorganRewriter(attributes: Attributes)(implicit monitor: AstRewritingMonitor) extends Rewriter {
 
-  def apply(that: AnyRef): AnyRef = instance(that)
+  override def apply(that: AnyRef): AnyRef = instance(that)
 
   private val step = Rewriter.lift {
     case p@Xor(expr1, expr2) =>
-      And(Or(expr1, expr2)(p.position), Not(And(expr1.endoRewrite(copyVariables), expr2.endoRewrite(copyVariables))(p.position))(p.position))(p.position)
+      val copyVariableRewriter = copyVariables(attributes)
+      val innerAnd = And(expr1.endoRewrite(copyVariableRewriter), expr2.endoRewrite(copyVariableRewriter))(p.position)(attributes.copy(p.id))
+      val not = Not(innerAnd)(p.position)(attributes.copy(p.id))
+      val or = Or(expr1, expr2)(p.position)(attributes.copy(p.id))
+      And(or, not)(p.position)(attributes.copy(p.id))
     case p@Not(And(exp1, exp2)) =>
-      Or(Not(exp1)(p.position), Not(exp2)(p.position))(p.position)
+      Or(Not(exp1)(p.position)(attributes.copy(p.id)), Not(exp2)(p.position)(attributes.copy(p.id)))(p.position)(attributes.copy(p.id))
     case p@Not(Or(exp1, exp2)) =>
-      And(Not(exp1)(p.position), Not(exp2)(p.position))(p.position)
+      And(Not(exp1)(p.position)(attributes.copy(p.id)), Not(exp2)(p.position)(attributes.copy(p.id)))(p.position)(attributes.copy(p.id))
   }
 
   private val instance: Rewriter = repeatWithSizeLimit(bottomUp(step))(monitor)
@@ -46,7 +50,7 @@ object distributeLawsRewriter {
   val DNF_CONVERSION_LIMIT = 8
 }
 
-case class distributeLawsRewriter()(implicit monitor: AstRewritingMonitor) extends Rewriter {
+case class distributeLawsRewriter(attributes: Attributes)(implicit monitor: AstRewritingMonitor) extends Rewriter {
   def apply(that: AnyRef): AnyRef = {
     if (dnfCounts(that) < distributeLawsRewriter.DNF_CONVERSION_LIMIT)
       instance(that)
@@ -62,8 +66,14 @@ case class distributeLawsRewriter()(implicit monitor: AstRewritingMonitor) exten
   }
 
   private val step = Rewriter.lift {
-    case p@Or(exp1, And(exp2, exp3)) => And(Or(exp1, exp2)(p.position), Or(exp1.endoRewrite(copyVariables), exp3)(p.position))(p.position)
-    case p@Or(And(exp1, exp2), exp3) => And(Or(exp1, exp3)(p.position), Or(exp2, exp3.endoRewrite(copyVariables))(p.position))(p.position)
+    case p@Or(exp1, And(exp2, exp3)) =>
+      And(
+        Or(exp1, exp2)(p.position)(attributes.copy(p.id)),
+        Or(exp1.endoRewrite(copyVariables(attributes)), exp3)(p.position)(attributes.copy(p.id)))(p.position)(attributes.copy(p.id))
+    case p@Or(And(exp1, exp2), exp3) =>
+      And(
+        Or(exp1, exp3)(p.position)(attributes.copy(p.id)),
+        Or(exp2, exp3.endoRewrite(copyVariables(attributes)))(p.position)(attributes.copy(p.id)))(p.position)(attributes.copy(p.id))
   }
 
   private val instance: Rewriter = repeatWithSizeLimit(bottomUp(step))(monitor)
@@ -73,38 +83,35 @@ object flattenBooleanOperators extends Rewriter {
   def apply(that: AnyRef): AnyRef = instance.apply(that)
 
   private val firstStep: Rewriter = Rewriter.lift {
-    case p@And(lhs, rhs) => Ands(Set(lhs, rhs))(p.position)
-    case p@Or(lhs, rhs)  => Ors(Set(lhs, rhs))(p.position)
+    case p@And(lhs, rhs) => Ands(Set(lhs, rhs))(p.position)(SameId(p.id))
+    case p@Or(lhs, rhs)  => Ors(Set(lhs, rhs))(p.position)(SameId(p.id))
   }
 
   private val secondStep: Rewriter = Rewriter.lift {
     case p@Ands(exprs) => Ands(exprs.flatMap {
       case Ands(inner) => inner
       case x => Set(x)
-    })(p.position)
+    })(p.position)(SameId(p.id))
     case p@Ors(exprs) => Ors(exprs.flatMap {
       case Ors(inner) => inner
       case x => Set(x)
-    })(p.position)
+    })(p.position)(SameId(p.id))
   }
 
   private val instance = inSequence(bottomUp(firstStep), fixedPoint(bottomUp(secondStep)))
 }
 
-object simplifyPredicates extends Rewriter {
+case class simplifyPredicates(attributes: Attributes) extends Rewriter {
   def apply(that: AnyRef): AnyRef = instance.apply(that)
 
-  private val T = True()(null)
-  private val F = False()(null)
-
   private val step: Rewriter = Rewriter.lift {
-    case Not(Not(exp))                    => exp
-    case p@Ands(exps) if exps.size == 1   => exps.head
-    case p@Ors(exps) if exps.size == 1    => exps.head
-    case p@Ands(exps) if exps.contains(T) => Ands(exps.filterNot(T == _))(p.position)
-    case p@Ors(exps) if exps.contains(F)  => Ors(exps.filterNot(F == _))(p.position)
-    case p@Ors(exps) if exps.contains(T)  => True()(p.position)
-    case p@Ands(exps) if exps.contains(F) => False()(p.position)
+    case Not(Not(exp))                                     => exp
+    case p@Ands(exps) if exps.size == 1                    => exps.head
+    case p@Ors(exps) if exps.size == 1                     => exps.head
+    case p@Ands(exps) if exps.exists(_.isInstanceOf[True]) => Ands(exps.filterNot(_.isInstanceOf[True]))(p.position)(SameId(p.id))
+    case p@Ors(exps) if exps.exists(_.isInstanceOf[False]) => Ors(exps.filterNot(_.isInstanceOf[False]))(p.position)(SameId(p.id))
+    case p@Ors(exps) if exps.exists(_.isInstanceOf[True])  => True()(p.position)(attributes.copy(p.id))
+    case p@Ands(exps) if exps.exists(_.isInstanceOf[False])=> False()(p.position)(attributes.copy(p.id))
   }
 
   private val instance = fixedPoint(bottomUp(step))
@@ -117,8 +124,8 @@ case object normalizeSargablePredicates extends Rewriter {
   private val instance: Rewriter = topDown(Rewriter.lift {
 
     // turn n.prop IS NOT NULL into exists(n.prop)
-    case predicate@IsNotNull(property@Property(_, _)) =>
-      Exists.asInvocation(property)(predicate.position)
+    case predicate@IsNotNull(_:Property) =>
+      Exists.asInvocation(predicate.lhs)(predicate.position, SameId(predicate.id))
 
     // remove not from inequality expressions by negating them
     case Not(inequality: InequalityExpression) =>

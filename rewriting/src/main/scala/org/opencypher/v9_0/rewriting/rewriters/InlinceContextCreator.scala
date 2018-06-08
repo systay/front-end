@@ -16,14 +16,14 @@
 package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.ast
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{Variable, _}
 import org.opencypher.v9_0.util.Foldable._
-import org.opencypher.v9_0.expressions.Variable
+import org.opencypher.v9_0.util.attribution.Attributes
 
-object inliningContextCreator extends (ast.Statement => InliningContext) {
+case class inliningContextCreator(attributes: Attributes) extends (ast.Statement => InliningContext) {
 
   def apply(input: ast.Statement): InliningContext = {
-    input.treeFold(InliningContext()) {
+    input.treeFold(InliningContext(attributes = attributes)) {
       // We cannot inline expressions in a DISTINCT with clause, projecting the result of the expression
       // would change the result of the distinctification
       case withClause: ast.With if !withClause.distinct =>

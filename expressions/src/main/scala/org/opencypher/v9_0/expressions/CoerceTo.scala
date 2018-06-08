@@ -15,8 +15,9 @@
  */
 package org.opencypher.v9_0.expressions
 
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.symbols.CypherType
 
-case class CoerceTo(expr: Expression, typ: CypherType) extends Expression {
+case class CoerceTo(expr: Expression, typ: CypherType)(implicit override val idGen: IdGen) extends Expression {
   def position = expr.position
 }

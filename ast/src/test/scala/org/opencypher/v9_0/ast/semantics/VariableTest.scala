@@ -15,15 +15,16 @@
  */
 package org.opencypher.v9_0.ast.semantics
 
-import org.opencypher.v9_0.util.DummyPosition
-import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.expressions.Variable
+import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
+import org.opencypher.v9_0.util.symbols._
 
 class VariableTest extends SemanticFunSuite {
 
   test("shouldDefineVariableDuringSemanticCheckWhenUndefined") {
     val position = DummyPosition(0)
-    val variable = Variable("x")(position)
+    val variable = Variable("x")(position)(new SequentialIdGen())
 
     val result = SemanticExpressionCheck.simple(variable)(SemanticState.clean)
     result.errors should have size 1

@@ -16,6 +16,7 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 
 sealed trait Literal extends Expression {
   def value: AnyRef
@@ -38,14 +39,20 @@ sealed abstract class DecimalIntegerLiteral(stringVal: String) extends IntegerLi
   lazy val value: java.lang.Long = java.lang.Long.parseLong(stringVal)
 }
 
-case class SignedDecimalIntegerLiteral(stringVal: String)(val position: InputPosition) extends DecimalIntegerLiteral(stringVal) with SignedIntegerLiteral
-case class UnsignedDecimalIntegerLiteral(stringVal: String)(val position: InputPosition) extends DecimalIntegerLiteral(stringVal) with UnsignedIntegerLiteral
+case class SignedDecimalIntegerLiteral(stringVal: String)
+                                      (val position: InputPosition)
+                                      (implicit override val idGen: IdGen) extends DecimalIntegerLiteral(stringVal) with SignedIntegerLiteral
+case class UnsignedDecimalIntegerLiteral(stringVal: String)
+                                        (val position: InputPosition)
+                                        (implicit override val idGen: IdGen) extends DecimalIntegerLiteral(stringVal) with UnsignedIntegerLiteral
 
 sealed abstract class OctalIntegerLiteral(stringVal: String) extends IntegerLiteral {
   lazy val value: java.lang.Long = java.lang.Long.parseLong(stringVal, 8)
 }
 
-case class SignedOctalIntegerLiteral(stringVal: String)(val position: InputPosition) extends OctalIntegerLiteral(stringVal) with SignedIntegerLiteral
+case class SignedOctalIntegerLiteral(stringVal: String)
+                                    (val position: InputPosition)
+                                    (implicit override val idGen: IdGen) extends OctalIntegerLiteral(stringVal) with SignedIntegerLiteral
 
 sealed abstract class HexIntegerLiteral(stringVal: String) extends IntegerLiteral {
   lazy val value: java.lang.Long =
@@ -55,22 +62,24 @@ sealed abstract class HexIntegerLiteral(stringVal: String) extends IntegerLitera
       java.lang.Long.parseLong(stringVal.substring(2), 16)
 }
 
-case class SignedHexIntegerLiteral(stringVal: String)(val position: InputPosition) extends HexIntegerLiteral(stringVal) with SignedIntegerLiteral
+case class SignedHexIntegerLiteral(stringVal: String)
+                                  (val position: InputPosition)
+                                  (implicit override val idGen: IdGen) extends HexIntegerLiteral(stringVal) with SignedIntegerLiteral
 
 
 sealed trait DoubleLiteral extends NumberLiteral {
   def value: java.lang.Double
 }
 
-case class DecimalDoubleLiteral(stringVal: String)(val position: InputPosition) extends DoubleLiteral {
+case class DecimalDoubleLiteral(stringVal: String)(val position: InputPosition)(implicit override val idGen: IdGen) extends DoubleLiteral {
   lazy val value: java.lang.Double = java.lang.Double.parseDouble(stringVal)
 }
 
-case class StringLiteral(value: String)(val position: InputPosition) extends Literal {
+case class StringLiteral(value: String)(val position: InputPosition)(implicit override val idGen: IdGen) extends Literal {
   override def asCanonicalStringVal = value
 }
 
-case class Null()(val position: InputPosition) extends Literal {
+case class Null()(val position: InputPosition)(implicit override val idGen: IdGen) extends Literal {
   val value = null
 
   override def asCanonicalStringVal = "NULL"
@@ -78,13 +87,13 @@ case class Null()(val position: InputPosition) extends Literal {
 
 sealed trait BooleanLiteral extends Literal
 
-case class True()(val position: InputPosition) extends BooleanLiteral {
+case class True()(val position: InputPosition)(implicit override val idGen: IdGen) extends BooleanLiteral {
   val value: java.lang.Boolean = true
 
   override def asCanonicalStringVal = "true"
 }
 
-case class False()(val position: InputPosition) extends BooleanLiteral {
+case class False()(val position: InputPosition)(implicit override val idGen: IdGen) extends BooleanLiteral {
   val value: java.lang.Boolean = false
 
   override def asCanonicalStringVal = "false"

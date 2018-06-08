@@ -22,6 +22,7 @@ import org.opencypher.v9_0.expressions.functions.{Distance, Exists}
 import org.opencypher.v9_0.expressions.{functions, _}
 import org.opencypher.v9_0.util.Foldable._
 import org.opencypher.v9_0.util._
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.helpers.StringHelper.RichString
 import org.opencypher.v9_0.util.symbols._
 
@@ -41,7 +42,7 @@ case class LoadCSV(
                     urlString: Expression,
                     variable: Variable,
                     fieldTerminator: Option[StringLiteral]
-                  )(val position: InputPosition) extends Clause with SemanticAnalysisTooling {
+                  )(val position: InputPosition)(implicit override val idGen: IdGen) extends Clause with SemanticAnalysisTooling {
   override def name: String = "LOAD CSV"
 
   override def semanticCheck: SemanticCheck =
@@ -74,7 +75,7 @@ sealed trait MultipleGraphClause extends Clause with SemanticAnalysisTooling {
     requireMultigraphSupport(s"The `$name` clause", position)
 }
 
-final case class FromGraph(graphName: QualifiedGraphName)(val position: InputPosition) extends MultipleGraphClause {
+final case class FromGraph(graphName: QualifiedGraphName)(val position: InputPosition)(implicit override val idGen: IdGen) extends MultipleGraphClause {
 
   override def name = "FROM GRAPH"
 
@@ -82,7 +83,7 @@ final case class FromGraph(graphName: QualifiedGraphName)(val position: InputPos
     super.semanticCheck chain SemanticState.recordCurrentScope(this)
 }
 
-final case class Clone(items: List[ReturnItem])(val position: InputPosition) extends MultipleGraphClause with SemanticAnalysisTooling {
+final case class Clone(items: List[ReturnItem])(val position: InputPosition)(implicit override val idGen: IdGen) extends MultipleGraphClause with SemanticAnalysisTooling {
 
   override def name: String = "CLONE"
 
@@ -99,7 +100,7 @@ final case class Clone(items: List[ReturnItem])(val position: InputPosition) ext
   }
 }
 
-case class New(pattern: Pattern)(val position: InputPosition) extends MultipleGraphClause with SingleRelTypeCheck {
+case class New(pattern: Pattern)(val position: InputPosition)(implicit override val idGen: IdGen) extends MultipleGraphClause with SingleRelTypeCheck {
 
   override def name = "NEW"
 
@@ -173,7 +174,7 @@ final case class ConstructGraph(
                                  clones: List[Clone] = List.empty,
                                  news: List[New] = List.empty,
                                  on: List[QualifiedGraphName] = List.empty
-                               )(val position: InputPosition) extends MultipleGraphClause {
+                               )(val position: InputPosition)(implicit override val idGen: IdGen) extends MultipleGraphClause {
 
   override def name = "CONSTRUCT"
 
@@ -253,7 +254,7 @@ final case class ConstructGraph(
   }
 }
 
-final case class ReturnGraph(graphName: Option[QualifiedGraphName])(val position: InputPosition) extends MultipleGraphClause {
+final case class ReturnGraph(graphName: Option[QualifiedGraphName])(val position: InputPosition)(implicit override val idGen: IdGen) extends MultipleGraphClause {
 
   override def name = "RETURN GRAPH"
 
@@ -262,7 +263,7 @@ final case class ReturnGraph(graphName: Option[QualifiedGraphName])(val position
       SemanticState.recordCurrentScope(this)
 }
 
-case class Start(items: Seq[StartItem], where: Option[Where])(val position: InputPosition) extends Clause {
+case class Start(items: Seq[StartItem], where: Option[Where])(val position: InputPosition)(implicit override val idGen: IdGen) extends Clause {
   override def name = "START"
 
   override def semanticCheck: SemanticCheck = (state: SemanticState) => {
@@ -306,7 +307,7 @@ case class Match(
                   pattern: Pattern,
                   hints: Seq[UsingHint],
                   where: Option[Where]
-                )(val position: InputPosition) extends Clause with SemanticAnalysisTooling {
+                )(val position: InputPosition)(implicit override val idGen: IdGen) extends Clause with SemanticAnalysisTooling {
   override def name = "MATCH"
 
   override def semanticCheck: SemanticCheck =
@@ -450,7 +451,7 @@ case class Match(
   }
 }
 
-case class Merge(pattern: Pattern, actions: Seq[MergeAction], where: Option[Where] = None)(val position: InputPosition)
+case class Merge(pattern: Pattern, actions: Seq[MergeAction], where: Option[Where] = None)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends UpdateClause with SingleRelTypeCheck {
 
   override def name = "MERGE"
@@ -461,7 +462,7 @@ case class Merge(pattern: Pattern, actions: Seq[MergeAction], where: Option[Wher
       checkRelTypes(pattern)
 }
 
-case class Create(pattern: Pattern)(val position: InputPosition) extends UpdateClause with SingleRelTypeCheck {
+case class Create(pattern: Pattern)(val position: InputPosition)(implicit override val idGen: IdGen) extends UpdateClause with SingleRelTypeCheck {
   override def name = "CREATE"
 
   override def semanticCheck: SemanticCheck =
@@ -469,7 +470,7 @@ case class Create(pattern: Pattern)(val position: InputPosition) extends UpdateC
       checkRelTypes(pattern)
 }
 
-case class CreateUnique(pattern: Pattern)(val position: InputPosition) extends UpdateClause {
+case class CreateUnique(pattern: Pattern)(val position: InputPosition)(implicit override val idGen: IdGen) extends UpdateClause {
   override def name = "CREATE UNIQUE"
 
   override def semanticCheck =
@@ -477,13 +478,13 @@ case class CreateUnique(pattern: Pattern)(val position: InputPosition) extends U
 
 }
 
-case class SetClause(items: Seq[SetItem])(val position: InputPosition) extends UpdateClause {
+case class SetClause(items: Seq[SetItem])(val position: InputPosition)(implicit override val idGen: IdGen) extends UpdateClause {
   override def name = "SET"
 
   override def semanticCheck: SemanticCheck = items.semanticCheck
 }
 
-case class Delete(expressions: Seq[Expression], forced: Boolean)(val position: InputPosition) extends UpdateClause {
+case class Delete(expressions: Seq[Expression], forced: Boolean)(val position: InputPosition)(implicit override val idGen: IdGen) extends UpdateClause {
   override def name = "DELETE"
 
   override def semanticCheck: SemanticCheck =
@@ -497,7 +498,7 @@ case class Delete(expressions: Seq[Expression], forced: Boolean)(val position: I
     }
 }
 
-case class Remove(items: Seq[RemoveItem])(val position: InputPosition) extends UpdateClause {
+case class Remove(items: Seq[RemoveItem])(val position: InputPosition)(implicit override val idGen: IdGen) extends UpdateClause {
   override def name = "REMOVE"
 
   override def semanticCheck: SemanticCheck = items.semanticCheck
@@ -507,7 +508,7 @@ case class Foreach(
                     variable: Variable,
                     expression: Expression,
                     updates: Seq[Clause]
-                  )(val position: InputPosition) extends UpdateClause {
+                  )(val position: InputPosition)(implicit override val idGen: IdGen) extends UpdateClause {
   override def name = "FOREACH"
 
   override def semanticCheck: SemanticCheck =
@@ -523,7 +524,7 @@ case class Foreach(
 case class Unwind(
                    expression: Expression,
                    variable: Variable
-                 )(val position: InputPosition) extends Clause with SemanticAnalysisTooling {
+                 )(val position: InputPosition)(implicit override val idGen: IdGen) extends Clause with SemanticAnalysisTooling {
   override def name = "UNWIND"
 
   override def semanticCheck: SemanticCheck =
@@ -548,7 +549,7 @@ case class UnresolvedCall(procedureNamespace: Namespace,
                           declaredArguments: Option[Seq[Expression]] = None,
                           // None: No results declared  (i.e. no "YIELD" part)
                           declaredResult: Option[ProcedureResult] = None
-                         )(val position: InputPosition) extends CallClause {
+                         )(val position: InputPosition)(implicit override val idGen: IdGen) extends CallClause {
 
   override def returnColumns: List[String] =
     declaredResult.map(_.items.map(_.variable.name).toList).getOrElse(List.empty)
@@ -654,7 +655,7 @@ sealed trait ProjectionClause extends HorizonClause {
 }
 
 object With {
-  def apply(returnItems: ReturnItemsDef)(pos: InputPosition): With =
+  def apply(returnItems: ReturnItemsDef)(pos: InputPosition)(implicit idGen: IdGen): With =
     With(distinct = false, returnItems, None, None, None, None)(pos)
 }
 
@@ -663,7 +664,7 @@ case class With(distinct: Boolean,
                 orderBy: Option[OrderBy],
                 skip: Option[Skip],
                 limit: Option[Limit],
-                where: Option[Where])(val position: InputPosition) extends ProjectionClause {
+                where: Option[Where])(val position: InputPosition)(implicit override val idGen: IdGen) extends ProjectionClause {
 
   override def name = "WITH"
 
@@ -682,7 +683,7 @@ case class With(distinct: Boolean,
 }
 
 object Return {
-  def apply(returnItems: ReturnItemsDef)(pos: InputPosition): Return =
+  def apply(returnItems: ReturnItemsDef)(pos: InputPosition)(implicit idGen: IdGen): Return =
     Return(distinct = false, returnItems, None, None, None)(pos)
 }
 
@@ -691,7 +692,7 @@ case class Return(distinct: Boolean,
                   orderBy: Option[OrderBy],
                   skip: Option[Skip],
                   limit: Option[Limit],
-                  excludedNames: Set[String] = Set.empty)(val position: InputPosition) extends ProjectionClause {
+                  excludedNames: Set[String] = Set.empty)(val position: InputPosition)(implicit override val idGen: IdGen) extends ProjectionClause {
 
   override def name = "RETURN"
 
@@ -710,7 +711,7 @@ case class Return(distinct: Boolean,
     }
 }
 
-case class PragmaWithout(excluded: Seq[LogicalVariable])(val position: InputPosition) extends HorizonClause {
+case class PragmaWithout(excluded: Seq[LogicalVariable])(val position: InputPosition)(implicit override val idGen: IdGen) extends HorizonClause {
   override def name = "_PRAGMA WITHOUT"
 
   val excludedNames: Set[String] = excluded.map(_.name).toSet

@@ -15,14 +15,13 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.ast.Match
-import org.opencypher.v9_0.expressions._
-import org.opencypher.v9_0.util.{InputPosition, Rewriter, topDown}
-import org.opencypher.v9_0.ast.Where
+import org.opencypher.v9_0.ast.{Match, Where}
 import org.opencypher.v9_0.expressions
-import org.opencypher.v9_0.expressions.{And, GreaterThan, Not, Or}
+import org.opencypher.v9_0.expressions.{And, GreaterThan, Not, Or, _}
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
+import org.opencypher.v9_0.util.{InputPosition, Rewriter, topDown}
 
-abstract class MatchPredicateNormalization(normalizer: MatchPredicateNormalizer, getDegreeRewriting: Boolean) extends Rewriter {
+abstract class MatchPredicateNormalization(normalizer: MatchPredicateNormalizer, getDegreeRewriting: Boolean, attributes: Attributes) extends Rewriter {
 
   def apply(that: AnyRef): AnyRef = instance(that)
 
@@ -38,23 +37,24 @@ abstract class MatchPredicateNormalization(normalizer: MatchPredicateNormalizer,
       val predOpt: Option[Expression] = rewrittenPredicates match {
         case Nil => None
         case exp :: Nil => Some(exp)
-        case list => Some(list.reduce(And(_, _)(m.position)))
+        case list => Some(list.reduce(And(_, _)(m.position)(attributes.copy(m.id))))
       }
 
       val newWhere: Option[Where] = predOpt.map {
         exp =>
           val pos: InputPosition = where.fold(m.position)(_.position)
+          val id = where.fold(m.id)(_.id)
           val e = if (getDegreeRewriting)
             exp.endoRewrite(whereRewriter)
           else
             exp
-          Where(e)(pos)
+          Where(e)(pos)(attributes.copy(id))
       }
 
       m.copy(
         pattern = pattern.endoRewrite(topDown(Rewriter.lift(normalizer.replace))),
         where = newWhere
-      )(m.position)
+      )(m.position)(attributes.copy(m.id))
   }
 
   private def whereRewriter: Rewriter = Rewriter.lift {
@@ -62,19 +62,22 @@ abstract class MatchPredicateNormalization(normalizer: MatchPredicateNormalizer,
     case p@PatternExpression(RelationshipsPattern(RelationshipChain(NodePattern(Some(node), List(), None, _),
                                                                     RelationshipPattern(None, types, None, None, dir, _, _),
                                                                     NodePattern(None, List(), None, _)))) =>
-      GreaterThan(calculateUsingGetDegree(p, node, types, dir), SignedDecimalIntegerLiteral("0")(p.position))(p.position)
+      val literal = SignedDecimalIntegerLiteral("0")(p.position)(attributes.copy(p.id))
+      GreaterThan(calculateUsingGetDegree(attributes).apply(p, node, types, dir), literal)(p.position)(attributes.copy(p.id))
     // WHERE ()-[:R]->(a) to WHERE GetDegree( (a)<-[:R]-()) > 0
     case p@PatternExpression(RelationshipsPattern(RelationshipChain(NodePattern(None, List(), None, _),
                                                                     RelationshipPattern(None, types, None, None, dir, _, _),
                                                                     NodePattern(Some(node), List(), None, _)))) =>
-      expressions.GreaterThan(calculateUsingGetDegree(p, node, types, dir.reversed), SignedDecimalIntegerLiteral("0")(p.position))(p.position)
+      val literal = SignedDecimalIntegerLiteral("0")(p.position)(attributes.copy(p.id))
+      expressions.GreaterThan(calculateUsingGetDegree(attributes)(p, node, types, dir.reversed), literal)(p.position)(attributes.copy(p.id))
 
+    // TODO: Should we not replace this with a bottomUp call instead?
     case a@And(lhs, rhs) =>
-      And(lhs.endoRewrite(whereRewriter), rhs.endoRewrite(whereRewriter))(a.position)
+      And(lhs.endoRewrite(whereRewriter), rhs.endoRewrite(whereRewriter))(a.position)(SameId(a.id))
 
-    case o@Or(lhs, rhs) => Or(lhs.endoRewrite(whereRewriter), rhs.endoRewrite(whereRewriter))(o.position)
+    case o@Or(lhs, rhs) => Or(lhs.endoRewrite(whereRewriter), rhs.endoRewrite(whereRewriter))(o.position)(SameId(o.id))
 
-    case n@Not(e) => Not(e.endoRewrite(whereRewriter))(n.position)
+    case n@Not(e) => Not(e.endoRewrite(whereRewriter))(n.position)(SameId(n.id))
   }
 
   private val instance = topDown(rewriter, _.isInstanceOf[Expression])

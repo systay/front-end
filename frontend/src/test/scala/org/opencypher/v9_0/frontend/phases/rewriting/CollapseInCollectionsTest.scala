@@ -15,10 +15,12 @@
  */
 package org.opencypher.v9_0.frontend.phases.rewriting
 
+import org.opencypher.v9_0.ast.Statement
 import org.opencypher.v9_0.rewriting.rewriters.collapseMultipleInPredicates
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.frontend.phases.CNFNormalizer
 import org.opencypher.v9_0.rewriting.AstRewritingTestSupport
+import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
 
 class CollapseInCollectionsTest extends CypherFunSuite with AstRewritingTestSupport {
 
@@ -26,7 +28,7 @@ class CollapseInCollectionsTest extends CypherFunSuite with AstRewritingTestSupp
     val original = parse("MATCH (a) WHERE id(a) IN [42] OR id(a) IN [13]")
     val expected = parse("MATCH (a) WHERE id(a) IN [42, 13]")
 
-    val result = original.rewrite(collapseMultipleInPredicates)
+    val result = rewrite(original)
 
     result should equal(expected)
   }
@@ -35,7 +37,7 @@ class CollapseInCollectionsTest extends CypherFunSuite with AstRewritingTestSupp
     val original = parse("MATCH (a) WHERE id(a) IN [42] OR id(a) IN [rand()]")
     val expected = parse("MATCH (a) WHERE id(a) IN [42, rand()]")
 
-    val result = original.rewrite(collapseMultipleInPredicates)
+    val result = rewrite(original)
 
     result should equal(expected)
   }
@@ -44,7 +46,7 @@ class CollapseInCollectionsTest extends CypherFunSuite with AstRewritingTestSupp
     val original = parse("MATCH (a) WHERE a.prop IN [42] OR a.prop IN [13]")
     val expected = parse("MATCH (a) WHERE a.prop IN [42, 13]")
 
-    val result = original.rewrite(collapseMultipleInPredicates)
+    val result = rewrite(original)
 
     result should equal(expected)
   }
@@ -53,14 +55,18 @@ class CollapseInCollectionsTest extends CypherFunSuite with AstRewritingTestSupp
     val original = parse("MATCH (a) WHERE a.prop IN [42] OR a.prop IN [rand()]")
     val expected = parse("MATCH (a) WHERE a.prop IN [42, rand()]")
 
-    val result = original.rewrite(collapseMultipleInPredicates)
+    val result = rewrite(original)
 
     result should equal(expected)
   }
 
+  private def rewrite(original: Statement) = {
+    original.rewrite(collapseMultipleInPredicates(Attributes(new SequentialIdGen())))
+  }
+
   private def parse(query: String) = {
     val parsed = parser.parse(query)
-    val rewriter = CNFNormalizer.instance(TestContext())
+    val rewriter = CNFNormalizer(Attributes(new SequentialIdGen())).instance(TestContext())
     parsed.endoRewrite(rewriter)
   }
 }

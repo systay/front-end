@@ -15,6 +15,7 @@
  */
 package org.opencypher.v9_0.expressions
 
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.{ASTNode, InputPosition}
 
 
@@ -60,7 +61,7 @@ object Pattern {
       val m0: Map[String, Seq[LogicalVariable]] = duplicates.groupBy(_.name)
 
       val resultMap = seen.foldLeft(m0) {
-        case (m, ident @ Variable(name)) if m.contains(name) => m.updated(name, Seq(ident) ++ m(name))
+        case (m, ident : Variable) if m.contains(ident.name) => m.updated(ident.name, Seq(ident) ++ m(ident.name))
         case (m, _)                                            => m
       }
 
@@ -69,7 +70,7 @@ object Pattern {
   }
 }
 
-case class Pattern(patternParts: Seq[PatternPart])(val position: InputPosition) extends ASTNode {
+case class Pattern(patternParts: Seq[PatternPart])(val position: InputPosition)(implicit override val idGen: IdGen) extends ASTNode {
 
   lazy val length = this.fold(0) {
     case RelationshipChain(_, _, _) => _ + 1
@@ -77,25 +78,25 @@ case class Pattern(patternParts: Seq[PatternPart])(val position: InputPosition) 
   }
 }
 
-case class RelationshipsPattern(element: RelationshipChain)(val position: InputPosition) extends ASTNode
+case class RelationshipsPattern(element: RelationshipChain)(val position: InputPosition)(implicit override val idGen: IdGen) extends ASTNode
 
 
 sealed abstract class PatternPart extends ASTNode {
   def element: PatternElement
 }
 
-case class NamedPatternPart(variable: Variable, patternPart: AnonymousPatternPart)(val position: InputPosition) extends PatternPart {
+case class NamedPatternPart(variable: Variable, patternPart: AnonymousPatternPart)(val position: InputPosition)(implicit override val idGen: IdGen) extends PatternPart {
   def element: PatternElement = patternPart.element
 }
 
 
 sealed trait AnonymousPatternPart extends PatternPart
 
-case class EveryPath(element: PatternElement) extends AnonymousPatternPart {
+case class EveryPath(element: PatternElement)(implicit override val idGen: IdGen) extends AnonymousPatternPart {
   def position = element.position
 }
 
-case class ShortestPaths(element: PatternElement, single: Boolean)(val position: InputPosition) extends AnonymousPatternPart {
+case class ShortestPaths(element: PatternElement, single: Boolean)(val position: InputPosition)(implicit override val idGen: IdGen) extends AnonymousPatternPart {
   val name: String =
     if (single)
       "shortestPath"
@@ -114,7 +115,7 @@ case class RelationshipChain(
                               element: PatternElement,
                               relationship: RelationshipPattern,
                               rightNode: NodePattern
-                            )(val position: InputPosition)
+                            )(val position: InputPosition)(implicit override val idGen: IdGen)
   extends PatternElement {
 
   def variable: Option[LogicalVariable] = relationship.variable
@@ -124,26 +125,24 @@ case class RelationshipChain(
 }
 
 object InvalidNodePattern {
-  def apply(id: Variable, labels: Seq[LabelName], properties: Option[Expression])(position: InputPosition) =
+  def apply(id: Variable, labels: Seq[LabelName], properties: Option[Expression])(position: InputPosition)(implicit idGen: IdGen) =
     new InvalidNodePattern(id)(position)
 }
 
-class InvalidNodePattern(
-                          val id: LogicalVariable
-                        )(
-                          position: InputPosition
-) extends NodePattern(Some(id), Seq.empty, None)(position) {
+class InvalidNodePattern(val lgVariable: LogicalVariable)
+                        (position: InputPosition)
+                        (implicit override val idGen: IdGen) extends NodePattern(Some(lgVariable), Seq.empty, None)(position) {
 
   override def canEqual(other: Any): Boolean = other.isInstanceOf[InvalidNodePattern]
 
   override def equals(other: Any): Boolean = other match {
     case that: InvalidNodePattern =>
       (that canEqual this) &&
-        id == that.id
+        lgVariable == that.lgVariable
     case _ => false
   }
 
-  override def hashCode(): Int = 31 * id.hashCode()
+  override def hashCode(): Int = 31 * lgVariable.hashCode()
 
   override def allVariables: Set[LogicalVariable] = Set.empty
 }
@@ -151,7 +150,7 @@ class InvalidNodePattern(
 case class NodePattern(variable: Option[LogicalVariable],
                        labels: Seq[LabelName],
                        properties: Option[Expression],
-                       baseNode: Option[LogicalVariable] = None)(val position: InputPosition)
+                       baseNode: Option[LogicalVariable] = None)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends PatternElement {
 
   override def allVariables: Set[LogicalVariable] = variable.toSet
@@ -167,7 +166,7 @@ case class RelationshipPattern(
                                 properties: Option[Expression],
                                 direction: SemanticDirection,
                                 legacyTypeSeparator: Boolean = false,
-                                baseRel: Option[LogicalVariable] = None)(val position: InputPosition) extends ASTNode {
+                                baseRel: Option[LogicalVariable] = None)(val position: InputPosition)(implicit override val idGen: IdGen) extends ASTNode {
 
   def isSingleLength: Boolean = length.isEmpty
 

@@ -16,6 +16,7 @@
 package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.expressions.{FunctionInvocation, FunctionName}
+import org.opencypher.v9_0.util.attribution.SameId
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 
 import scala.collection.immutable.TreeMap
@@ -33,8 +34,8 @@ case object replaceAliasedFunctionInvocations extends Rewriter {
                                              "rels" -> "relationships")(CaseInsensitiveOrdered)
 
   val instance: Rewriter = bottomUp(Rewriter.lift {
-    case func@FunctionInvocation(_, f@FunctionName(name), _, _) if aliases.get(name).nonEmpty =>
-      func.copy(functionName = FunctionName(aliases(name))(f.position))(func.position)
+    case func@FunctionInvocation(_, f@FunctionName(name), _, _) if aliases.contains(name) =>
+      func.copy(functionName = FunctionName(aliases(name))(f.position)(SameId(f.id)))(func.position)(SameId(func.id))
   })
 
 }

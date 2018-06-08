@@ -17,15 +17,16 @@ package org.opencypher.v9_0.ast
 
 import org.opencypher.v9_0.ast.semantics.SemanticCheck
 import org.opencypher.v9_0.ast.semantics.SemanticCheckResult.success
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.{ASTNode, InputPosition}
 
 object ProcedureResult {
-  def from(items: ProcedureResultItem*)(position: InputPosition): ProcedureResult =
+  def from(items: ProcedureResultItem*)(position: InputPosition)(implicit idGen: IdGen): ProcedureResult =
     ProcedureResult(items.toIndexedSeq, None)(position)
 }
 
 case class ProcedureResult(items: IndexedSeq[ProcedureResultItem], where: Option[Where] = None)
-                          (val position: InputPosition)
+                          (val position: InputPosition)(implicit override val idGen: IdGen)
   extends ASTNode {
 
   def semanticCheck: SemanticCheck =

@@ -15,12 +15,13 @@
  */
 package org.opencypher.v9_0.ast.semantics
 
-import org.opencypher.v9_0.expressions.{DummyExpression, ReduceExpression}
+import org.opencypher.v9_0.expressions.{DummyExpression, ReduceExpression, Variable}
 import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.symbols._
-import org.opencypher.v9_0.expressions.Variable
 
 class ReduceExpressionTest extends SemanticFunSuite {
+  private implicit val idGen: IdGen = new SequentialIdGen()
 
   test("shouldEvaluateReduceExpressionWithTypedVariables") {
     val error = SemanticError("dummy error", DummyPosition(10))
@@ -32,7 +33,7 @@ class ReduceExpressionTest extends SemanticFunSuite {
           s.symbolTypes("y") should equal(CTInteger.invariant)
           (specifyType(CTString, self) chain error)(s)
         }
-      )
+      )()
 
     val filter = ReduceExpression(
       accumulator = Variable("x")(DummyPosition(2)),
@@ -59,7 +60,7 @@ class ReduceExpressionTest extends SemanticFunSuite {
           s.symbolTypes("y") should equal(listType.innerType.invariant)
           (specifyType(CTFloat, self) chain SemanticCheckResult.success)(s)
         }
-      )
+      )()
 
     val filter = ReduceExpression(
       accumulator = Variable("x")(DummyPosition(2)),
@@ -85,7 +86,7 @@ class ReduceExpressionTest extends SemanticFunSuite {
           s.symbolTypes("y") should equal(listType.innerType.invariant)
           (specifyType(CTNode, self) chain SemanticCheckResult.success)(s)
         }
-      )
+      )()
 
     val filter = ReduceExpression(
       accumulator = Variable("x")(DummyPosition(2)),

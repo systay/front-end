@@ -15,18 +15,16 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.ast.semantics.SemanticError
+import org.opencypher.v9_0.ast.semantics.{SemanticError, SemanticState}
 import org.opencypher.v9_0.expressions.StringLiteral
 import org.opencypher.v9_0.util.DummyPosition
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.ast.semantics.SemanticState
-import org.opencypher.v9_0.expressions.Variable
 
-class LoadCSVTest extends CypherFunSuite {
+class LoadCSVTest extends CypherFunSuite with AstConstructionTestSupport {
 
-  val literalURL = StringLiteral("file:///tmp/foo.csv")(DummyPosition(4))
-  val variable = Variable("a")(DummyPosition(4))
+  val literalURL = literalString("file:///tmp/foo.csv")
+  val variable = varFor("a")
 
   test("cannot overwrite existing variable") {
     val loadCSV = LoadCSV(withHeaders = true, literalURL, variable, None)(DummyPosition(6))

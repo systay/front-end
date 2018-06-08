@@ -19,6 +19,7 @@ import org.opencypher.v9_0.ast.AliasedReturnItem
 import org.opencypher.v9_0.expressions.Expression
 import org.opencypher.v9_0.util.Foldable.TreeAny
 import org.opencypher.v9_0.util.Rewritable._
+import org.opencypher.v9_0.util.attribution.SameId
 import org.opencypher.v9_0.util.{InternalException, Rewritable, Rewriter}
 
 import scala.annotation.tailrec
@@ -49,7 +50,7 @@ case class ReturnItemSafeTopDownRewriter(inner: Rewriter) extends Rewriter {
           case (Nil, _) => throw new InternalException("only to stop warnings. should never happen")
           case ((returnItem@AliasedReturnItem(expression, variable)) :: jobs, doneJobs) =>
             val newExpression = newChildren.head.asInstanceOf[Expression]
-            val newReturnItem = returnItem.copy(expression = newExpression)(returnItem.position)
+            val newReturnItem = returnItem.copy(expression = newExpression)(returnItem.position)(SameId(returnItem.id))
             stack.push((jobs, doneJobs += newReturnItem))
           case (job :: jobs, doneJobs) =>
             val doneJob = Rewritable.dupAny(job, newChildren)

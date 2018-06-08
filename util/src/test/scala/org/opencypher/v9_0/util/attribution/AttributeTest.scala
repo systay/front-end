@@ -26,8 +26,8 @@ class AttributeTest extends CypherFunSuite {
     attr.set(Id(2), 33)
 
     attr.get(Id(2)) should be(33)
-    a[Exception] should be thrownBy attr.get(Id(1))
-    a[Exception] should be thrownBy attr.get(Id(3))
+    an[Exception] should be thrownBy attr.get(Id(1))
+    an[Exception] should be thrownBy attr.get(Id(3))
   }
 
   test("test isDefinedAt") {
@@ -39,7 +39,6 @@ class AttributeTest extends CypherFunSuite {
     attr.isDefinedAt(Id(2)) should be(true)
     attr.isDefinedAt(Id(3)) should be(false)
     attr.isDefinedAt(Id(4)) should be(true)
-
   }
 
   test("test iterator") {

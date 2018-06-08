@@ -20,11 +20,13 @@ import org.opencypher.v9_0.ast.semantics.SemanticErrorDef
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.frontend.phases._
+import org.opencypher.v9_0.util.attribution.{Attributes, IdGen, SequentialIdGen}
 
 class SemanticAnalysisTest extends CypherFunSuite with AstConstructionTestSupport {
 
   // This test invokes SemanticAnalysis twice because that's what the production pipeline does
-  val pipeline = Parsing andThen SemanticAnalysis(warn = true) andThen SemanticAnalysis(warn = false)
+  val pipeline: Transformer[BaseContext, BaseState, BaseState] =
+    Parsing(Attributes(new SequentialIdGen())) andThen SemanticAnalysis(warn = true) andThen SemanticAnalysis(warn = false)
 
   test("can inject starting semantic state") {
     val query = "RETURN name AS name"
@@ -59,6 +61,7 @@ object ErrorCollectingContext extends BaseContext {
   override def monitors = ???
   override def errorHandler = (errs: Seq[SemanticErrorDef]) =>
     errors = errs
+  override val astIdGen: IdGen = new SequentialIdGen()
 }
 
 object NoPlannerName extends PlannerName {

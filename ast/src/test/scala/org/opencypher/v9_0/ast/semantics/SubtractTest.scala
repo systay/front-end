@@ -19,7 +19,7 @@ import org.opencypher.v9_0.expressions.Subtract
 import org.opencypher.v9_0.util.DummyPosition
 import org.opencypher.v9_0.util.symbols._
 
-class SubtractTest extends InfixExpressionTestBase(Subtract(_, _)(DummyPosition(0))) {
+class SubtractTest extends InfixExpressionTestBase(Subtract(_, _)(DummyPosition(0))(_)) {
 
   // Infix specializations:
   // 1 - 1 => 0

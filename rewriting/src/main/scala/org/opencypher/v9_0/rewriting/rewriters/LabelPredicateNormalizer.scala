@@ -16,13 +16,14 @@
 package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.expressions.{Expression, HasLabels, NodePattern}
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 
-object LabelPredicateNormalizer extends MatchPredicateNormalizer {
+case class LabelPredicateNormalizer(attributes: Attributes) extends MatchPredicateNormalizer {
   override val extract: PartialFunction[AnyRef, IndexedSeq[Expression]] = {
-    case p@NodePattern(Some(id), labels, _, _) if labels.nonEmpty => Vector(HasLabels(id.copyId, labels)(p.position))
+    case p@NodePattern(Some(id), labels, _, _) if labels.nonEmpty => Vector(HasLabels(id.copyId, labels)(p.position)(attributes.copy(p.id)))
   }
 
   override val replace: PartialFunction[AnyRef, AnyRef] = {
-    case p@NodePattern(Some(id), labels, _, _) if labels.nonEmpty => p.copy(variable = Some(id.copyId), labels = Seq.empty)(p.position)
+    case p@NodePattern(Some(id), labels, _, _) if labels.nonEmpty => p.copy(variable = Some(id.copyId), labels = Seq.empty)(p.position)(SameId(p.id))
   }
 }

@@ -15,5 +15,10 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-case class normalizeMatchPredicates(getDegreeRewriting: Boolean)
-  extends MatchPredicateNormalization(MatchPredicateNormalizerChain(PropertyPredicateNormalizer, LabelPredicateNormalizer), getDegreeRewriting)
+import org.opencypher.v9_0.util.attribution.Attributes
+
+case class normalizeMatchPredicates(getDegreeRewriting: Boolean, attributes: Attributes)
+  extends MatchPredicateNormalization(
+    normalizer = MatchPredicateNormalizerChain(PropertyPredicateNormalizer(attributes), LabelPredicateNormalizer(attributes)),
+    getDegreeRewriting = getDegreeRewriting,
+    attributes = attributes)

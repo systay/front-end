@@ -15,22 +15,21 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.ast.semantics.SemanticExpressionCheck
-import org.opencypher.v9_0.expressions.{LogicalProperty, LogicalVariable}
+import org.opencypher.v9_0.ast.semantics.{SemanticCheckable, SemanticExpressionCheck}
+import org.opencypher.v9_0.expressions.{LabelName, LogicalProperty, LogicalVariable}
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.{ASTNode, InputPosition}
-import org.opencypher.v9_0.ast.semantics.{SemanticCheckable, SemanticExpressionCheck}
-import org.opencypher.v9_0.expressions.LabelName
 
 sealed trait RemoveItem extends ASTNode with SemanticCheckable
 
-case class RemoveLabelItem(variable: LogicalVariable, labels: Seq[LabelName])(val position: InputPosition) extends RemoveItem {
+case class RemoveLabelItem(variable: LogicalVariable, labels: Seq[LabelName])(val position: InputPosition)(implicit override val idGen: IdGen) extends RemoveItem {
   def semanticCheck =
     SemanticExpressionCheck.simple(variable) chain
     SemanticExpressionCheck.expectType(CTNode.covariant, variable)
 }
 
-case class RemovePropertyItem(property: LogicalProperty) extends RemoveItem {
+case class RemovePropertyItem(property: LogicalProperty)(implicit override val idGen: IdGen) extends RemoveItem {
   def position = property.position
 
   def semanticCheck = SemanticExpressionCheck.simple(property)

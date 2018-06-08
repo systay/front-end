@@ -15,14 +15,15 @@
  */
 package org.opencypher.v9_0.rewriting
 
-import org.opencypher.v9_0.ast.AstConstructionTestSupport
+import org.opencypher.v9_0.ast.semantics.SyntaxExceptionCreator
+import org.opencypher.v9_0.ast.{AstConstructionTestSupport, Statement}
 import org.opencypher.v9_0.rewriting.rewriters.{isolateAggregation, normalizeReturnClauses, normalizeWithClauses}
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.inSequence
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.ast.semantics.SyntaxExceptionCreator
 
 class IsolateAggregationTest extends CypherFunSuite with RewriteTest with AstConstructionTestSupport {
-  val rewriterUnderTest = isolateAggregation
+  val rewriterUnderTest = isolateAggregation(Attributes(idGen))
 
   test("does not rewrite things that should not be rewritten") {
     assertIsNotRewritten("MATCH n RETURN n AS n")
@@ -184,8 +185,9 @@ class IsolateAggregationTest extends CypherFunSuite with RewriteTest with AstCon
     )
   }
 
-  override protected def parseForRewriting(queryText: String) = {
+  override protected def parseForRewriting(queryText: String): Statement = {
     val mkException = new SyntaxExceptionCreator(queryText, Some(pos))
-    super.parseForRewriting(queryText).endoRewrite(inSequence(normalizeReturnClauses(mkException), normalizeWithClauses(mkException)))
+    val attributes = Attributes(idGen)
+    super.parseForRewriting(queryText).endoRewrite(inSequence(normalizeReturnClauses(mkException, attributes), normalizeWithClauses(mkException, attributes)))
   }
 }

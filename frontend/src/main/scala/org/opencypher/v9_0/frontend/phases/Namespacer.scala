@@ -15,14 +15,15 @@
  */
 package org.opencypher.v9_0.frontend.phases
 
-import org.opencypher.v9_0.ast.{Statement, _}
 import org.opencypher.v9_0.ast.semantics.{Scope, SemanticTable, SymbolUse}
+import org.opencypher.v9_0.ast.{Statement, _}
 import org.opencypher.v9_0.expressions.{LogicalVariable, ProcedureOutput, Variable}
 import org.opencypher.v9_0.frontend.phases.CompilationPhaseTracer.CompilationPhase
 import org.opencypher.v9_0.frontend.phases.CompilationPhaseTracer.CompilationPhase.AST_REWRITE
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.{Ref, Rewriter, bottomUp, inSequence}
 
-object Namespacer extends Phase[BaseContext, BaseState, BaseState] {
+case class Namespacer(attributes: Attributes) extends Phase[BaseContext, BaseState, BaseState] {
   type VariableRenamings = Map[Ref[Variable], Variable]
 
   override def phase: CompilationPhase = AST_REWRITE
@@ -78,7 +79,7 @@ object Namespacer extends Phase[BaseContext, BaseState, BaseState] {
   private def renamingRewriter(renamings: VariableRenamings): Rewriter = inSequence(
     bottomUp(Rewriter.lift {
       case item@ProcedureResultItem(None, v: Variable) if renamings.contains(Ref(v)) =>
-        item.copy(output = Some(ProcedureOutput(v.name)(v.position)))(item.position)
+        item.copy(output = Some(ProcedureOutput(v.name)(v.position)(attributes.copy(v.id))))(item.position)(SameId(item.id))
     }),
     bottomUp(Rewriter.lift {
       case v: Variable =>

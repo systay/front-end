@@ -120,10 +120,11 @@ trait Attribute[T] {
   * @param idGen the IdGen used to provide new IDs
   * @param attributes the attributes encapsulated
   */
+// TODO make all rewriters usi Attributes.copy for scope and position
 case class Attributes(idGen: IdGen, private val attributes: Attribute[_]*) {
   def copy(from: Id): IdGen = new IdGen {
-    override def id(): Id = {
-      val to = idGen.id()
+    override def id: Id = {
+      val to = idGen.id
       for (a <- attributes) {
         a.copy(from, to)
       }

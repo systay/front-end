@@ -15,20 +15,19 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.ast._
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.ast.{Statement, _}
+import org.opencypher.v9_0.expressions.{Pattern, _}
 import org.opencypher.v9_0.util._
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.helpers.fixedPoint
-import org.opencypher.v9_0.ast.Statement
-import org.opencypher.v9_0.expressions.Pattern
 
 
-case object inlineProjections extends Rewriter {
+case class inlineProjections(attr: Attributes) extends Rewriter {
 
   def apply(in: AnyRef): AnyRef = instance(in)
 
   private val instance = Rewriter.lift { case input: Statement =>
-    val context = inliningContextCreator(input)
+    val context = inliningContextCreator(attr)(input)
 
     val inlineVariables = TypedRewriter[ASTNode](context.variableRewriter)
     val inlinePatterns = TypedRewriter[Pattern](context.patternRewriter)
@@ -40,12 +39,12 @@ case object inlineProjections extends Rewriter {
         withClause.copy(
           returnItems = withClause.returnItems.rewrite(inlineReturnItemsInWith).asInstanceOf[ReturnItems],
           where = withClause.where.map(inlineVariables.narrowed)
-        )(withClause.position)
+        )(withClause.position)(SameId(withClause.id))
 
       case returnClause: Return =>
         returnClause.copy(
           returnItems = returnClause.returnItems.rewrite(inlineReturnItemsInReturn).asInstanceOf[ReturnItems]
-        )(returnClause.position)
+        )(returnClause.position)(SameId(returnClause.id))
 
       case m @ Match(_, mPattern, mHints, mOptWhere) =>
         val newOptWhere = mOptWhere.map(inlineVariables.narrowed)
@@ -53,7 +52,7 @@ case object inlineProjections extends Rewriter {
         // no need to inline expressions in patterns since all expressions have been moved to WHERE prior to
         // calling inlineProjections
         val newPattern = inlinePatterns(mPattern)
-        m.copy(pattern = newPattern, hints = newHints, where = newOptWhere)(m.position)
+        m.copy(pattern = newPattern, hints = newHints, where = newOptWhere)(m.position)(SameId(m.id))
 
       case _: UpdateClause  =>
         throw new InternalException("Update clauses not excepted here")
@@ -94,13 +93,13 @@ case object inlineProjections extends Rewriter {
             IndexedSeq(item)
           } else {
             dependencies.map { id =>
-              AliasedReturnItem(id.copyId, id.copyId)(item.position)
+              AliasedReturnItem(id.copyId, id.copyId)(item.position)(SameId(item.id))
             }.toIndexedSeq
           }
         case item: AliasedReturnItem => IndexedSeq(
-          item.copy(expression = inlineExpressions(item.expression))(item.position)
+          item.copy(expression = inlineExpressions(item.expression))(item.position)(SameId(item.id))
         )
       }
-      ri.copy(items = newItems)(ri.position)
+      ri.copy(items = newItems)(ri.position)(SameId(ri.id))
   }
 }

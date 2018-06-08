@@ -16,6 +16,7 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.{IdGen, SameId}
 
 trait FilteringExpression extends Expression {
   def name: String
@@ -26,7 +27,9 @@ trait FilteringExpression extends Expression {
   override def arguments = Seq(expression)
 }
 
-case class FilterExpression(scope: FilterScope, expression: Expression)(val position: InputPosition) extends FilteringExpression {
+case class FilterExpression(scope: FilterScope, expression: Expression)
+                           (val position: InputPosition)
+                           (implicit override val idGen: IdGen) extends FilteringExpression {
   val name = "filter"
 
   def variable = scope.variable
@@ -34,11 +37,13 @@ case class FilterExpression(scope: FilterScope, expression: Expression)(val posi
 }
 
 object FilterExpression {
-  def apply(variable: Variable, expression: Expression, innerPredicate: Option[Expression])(position: InputPosition): FilterExpression =
+  def apply(variable: Variable, expression: Expression, innerPredicate: Option[Expression])(position: InputPosition)(implicit idGen: IdGen): FilterExpression =
     FilterExpression(FilterScope(variable, innerPredicate)(position), expression)(position)
 }
 
-case class ExtractExpression(scope: ExtractScope, expression: Expression)(val position: InputPosition) extends FilteringExpression
+case class ExtractExpression(scope: ExtractScope, expression: Expression)
+                            (val position: InputPosition)
+                            (implicit override val idGen: IdGen) extends FilteringExpression
 {
   val name = "extract"
 
@@ -51,11 +56,11 @@ object ExtractExpression {
   def apply(variable: Variable,
             expression: Expression,
             innerPredicate: Option[Expression],
-            extractExpression: Option[Expression])(position: InputPosition): ExtractExpression =
+            extractExpression: Option[Expression])(position: InputPosition)(implicit idGen: IdGen): ExtractExpression =
     ExtractExpression(ExtractScope(variable, innerPredicate, extractExpression)(position), expression)(position)
 }
 
-case class ListComprehension(scope: ExtractScope, expression: Expression)(val position: InputPosition)
+case class ListComprehension(scope: ExtractScope, expression: Expression)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends FilteringExpression {
 
   val name = "[...]"
@@ -69,20 +74,20 @@ object ListComprehension {
   def apply(variable: Variable,
             expression: Expression,
             innerPredicate: Option[Expression],
-            extractExpression: Option[Expression])(position: InputPosition): ListComprehension =
+            extractExpression: Option[Expression])(position: InputPosition)(implicit idGen: IdGen): ListComprehension =
     ListComprehension(ExtractScope(variable, innerPredicate, extractExpression)(position), expression)(position)
 }
 
 case class PatternComprehension(namedPath: Option[LogicalVariable], pattern: RelationshipsPattern,
                                 predicate: Option[Expression], projection: Expression,
                                 outerScope: Set[LogicalVariable] = Set.empty)
-                               (val position: InputPosition)
+                               (val position: InputPosition)(implicit override val idGen: IdGen)
   extends ScopeExpression {
 
   self =>
 
-  def withOuterScope(outerScope: Set[LogicalVariable]) =
-    copy(outerScope = outerScope)(position)
+  def withOuterScope(outerScope: Set[LogicalVariable]): PatternComprehension =
+    copy(outerScope = outerScope)(position)(SameId(id))
 
   override val introducedVariables: Set[LogicalVariable] = {
     val introducedInternally = namedPath.toSet ++ pattern.element.allVariables
@@ -103,43 +108,58 @@ sealed trait IterablePredicateExpression extends FilteringExpression {
   }
 }
 
-case class AllIterablePredicate(scope: FilterScope, expression: Expression)(val position: InputPosition) extends IterablePredicateExpression {
+case class AllIterablePredicate(scope: FilterScope, expression: Expression)
+                               (val position: InputPosition)
+                               (implicit override val idGen: IdGen) extends IterablePredicateExpression {
   val name = "all"
 }
 
 object AllIterablePredicate {
-  def apply(variable: LogicalVariable, expression: Expression, innerPredicate: Option[Expression])(position: InputPosition): AllIterablePredicate =
+  def apply(variable: LogicalVariable, expression: Expression, innerPredicate: Option[Expression])(position: InputPosition)(implicit idGen: IdGen): AllIterablePredicate =
     AllIterablePredicate(FilterScope(variable, innerPredicate)(position), expression)(position)
 }
 
-case class AnyIterablePredicate(scope: FilterScope, expression: Expression)(val position: InputPosition) extends IterablePredicateExpression {
+case class AnyIterablePredicate(scope: FilterScope, expression: Expression)
+                               (val position: InputPosition)
+                               (implicit override val idGen: IdGen) extends IterablePredicateExpression {
   val name = "any"
 }
 
 object AnyIterablePredicate {
-  def apply(variable: LogicalVariable, expression: Expression, innerPredicate: Option[Expression])(position: InputPosition): AnyIterablePredicate =
+  def apply(variable: LogicalVariable, expression: Expression, innerPredicate: Option[Expression])
+           (position: InputPosition)(implicit idGen: IdGen): AnyIterablePredicate =
     AnyIterablePredicate(FilterScope(variable, innerPredicate)(position), expression)(position)
 }
 
-case class NoneIterablePredicate(scope: FilterScope, expression: Expression)(val position: InputPosition) extends IterablePredicateExpression {
+case class NoneIterablePredicate(scope: FilterScope, expression: Expression)
+                                (val position: InputPosition)
+                                (implicit override val idGen: IdGen) extends IterablePredicateExpression {
   val name = "none"
 }
 
 object NoneIterablePredicate {
-  def apply(variable: LogicalVariable, expression: Expression, innerPredicate: Option[Expression])(position: InputPosition): NoneIterablePredicate =
+  def apply(variable: LogicalVariable, expression: Expression, innerPredicate: Option[Expression])
+           (position: InputPosition)
+           (implicit idGen: IdGen): NoneIterablePredicate =
     NoneIterablePredicate(FilterScope(variable, innerPredicate)(position), expression)(position)
 }
 
-case class SingleIterablePredicate(scope: FilterScope, expression: Expression)(val position: InputPosition) extends IterablePredicateExpression {
+case class SingleIterablePredicate(scope: FilterScope, expression: Expression)
+                                  (val position: InputPosition)
+                                  (implicit override val idGen: IdGen) extends IterablePredicateExpression {
   val name = "single"
 }
 
 object SingleIterablePredicate {
-  def apply(variable: LogicalVariable, expression: Expression, innerPredicate: Option[Expression])(position: InputPosition): SingleIterablePredicate =
+  def apply(variable: LogicalVariable, expression: Expression, innerPredicate: Option[Expression])
+           (position: InputPosition)
+           (implicit idGen: IdGen): SingleIterablePredicate =
     SingleIterablePredicate(FilterScope(variable, innerPredicate)(position), expression)(position)
 }
 
-case class ReduceExpression(scope: ReduceScope, init: Expression, list: Expression)(val position: InputPosition) extends Expression {
+case class ReduceExpression(scope: ReduceScope, init: Expression, list: Expression)
+                           (val position: InputPosition)
+                           (implicit override val idGen: IdGen) extends Expression {
   def variable = scope.variable
   def accumulator = scope.accumulator
   def expression = scope.expression
@@ -148,7 +168,9 @@ case class ReduceExpression(scope: ReduceScope, init: Expression, list: Expressi
 object ReduceExpression {
   val AccumulatorExpressionTypeMismatchMessageGenerator = (expected: String, existing: String) => s"accumulator is $expected but expression has type $existing"
 
-  def apply(accumulator: Variable, init: Expression, variable: Variable, list: Expression, expression: Expression)(position: InputPosition): ReduceExpression =
+  def apply(accumulator: Variable, init: Expression, variable: Variable, list: Expression, expression: Expression)
+           (position: InputPosition)
+           (implicit idGen: IdGen): ReduceExpression =
     ReduceExpression(ReduceScope(accumulator, variable, expression)(position), init, list)(position)
 }
 

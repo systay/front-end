@@ -15,20 +15,21 @@
  */
 package org.opencypher.v9_0.frontend.phases
 
-import org.opencypher.v9_0.rewriting.rewriters._
-import org.opencypher.v9_0.util.inSequence
 import org.opencypher.v9_0.frontend.phases.CompilationPhaseTracer.CompilationPhase.AST_REWRITE
+import org.opencypher.v9_0.rewriting.rewriters._
+import org.opencypher.v9_0.util.attribution.Attributes
+import org.opencypher.v9_0.util.inSequence
 
-case object PreparatoryRewriting extends Phase[BaseContext, BaseState, BaseState] {
+case class PreparatoryRewriting(attributes: Attributes) extends Phase[BaseContext, BaseState, BaseState] {
 
   override def process(from: BaseState, context: BaseContext): BaseState = {
 
     val rewrittenStatement = from.statement().endoRewrite(inSequence(
-      normalizeReturnClauses(context.exceptionCreator),
-      normalizeWithClauses(context.exceptionCreator),
-      expandCallWhere,
+      normalizeReturnClauses(context.exceptionCreator, attributes),
+      normalizeWithClauses(context.exceptionCreator, attributes),
+      expandCallWhere(attributes),
       replaceAliasedFunctionInvocations,
-      mergeInPredicates))
+      mergeInPredicates(attributes)))
 
     from.withStatement(rewrittenStatement)
   }

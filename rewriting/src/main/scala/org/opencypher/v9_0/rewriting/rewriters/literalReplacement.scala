@@ -16,10 +16,10 @@
 package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.ast._
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{NodePattern, Parameter, RelationshipPattern, _}
+import org.opencypher.v9_0.util.attribution.SameId
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.{ASTNode, IdentityMap, Rewriter, bottomUp}
-import org.opencypher.v9_0.expressions.{NodePattern, Parameter, RelationshipPattern}
 
 object literalReplacement {
 
@@ -58,25 +58,25 @@ object literalReplacement {
     case l: StringLiteral =>
       acc =>
         if (acc.contains(l)) (acc, None) else {
-          val parameter = Parameter(s"  AUTOSTRING${acc.size}", CTString)(l.position)
+          val parameter = Parameter(s"  AUTOSTRING${acc.size}", CTString)(l.position)(SameId(l.id))
           (acc + (l -> LiteralReplacement(parameter, l.value)), None)
         }
     case l: IntegerLiteral =>
       acc =>
         if (acc.contains(l)) (acc, None) else {
-          val parameter = Parameter(s"  AUTOINT${acc.size}", CTInteger)(l.position)
+          val parameter = Parameter(s"  AUTOINT${acc.size}", CTInteger)(l.position)(SameId(l.id))
           (acc + (l -> LiteralReplacement(parameter, l.value)), None)
         }
     case l: DoubleLiteral =>
       acc =>
         if (acc.contains(l)) (acc, None) else {
-          val parameter = Parameter(s"  AUTODOUBLE${acc.size}", CTFloat)(l.position)
+          val parameter = Parameter(s"  AUTODOUBLE${acc.size}", CTFloat)(l.position)(SameId(l.id))
           (acc + (l -> LiteralReplacement(parameter, l.value)), None)
         }
     case l: ListLiteral if l.expressions.forall(_.isInstanceOf[Literal]) =>
       acc =>
         if (acc.contains(l)) (acc, None) else {
-          val parameter = Parameter(s"  AUTOLIST${acc.size}", CTList(CTAny))(l.position)
+          val parameter = Parameter(s"  AUTOLIST${acc.size}", CTList(CTAny))(l.position)(SameId(l.id))
           val values: Seq[AnyRef] = l.expressions.map(_.asInstanceOf[Literal].value).toIndexedSeq
           (acc + (l -> LiteralReplacement(parameter, values)), None)
         }

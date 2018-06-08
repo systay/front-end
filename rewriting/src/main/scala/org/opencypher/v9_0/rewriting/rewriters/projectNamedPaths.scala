@@ -16,15 +16,15 @@
 package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.ast.{AliasedReturnItem, With}
-import org.opencypher.v9_0.expressions._
-import org.opencypher.v9_0.util.Foldable.FoldableAny
-import org.opencypher.v9_0.util.{InternalException, Ref, Rewriter, topDown}
 import org.opencypher.v9_0.expressions
 import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.util.Foldable.FoldableAny
+import org.opencypher.v9_0.util.attribution.Attributes
+import org.opencypher.v9_0.util.{InternalException, Ref, Rewriter, topDown}
 
 import scala.annotation.tailrec
 
-case object projectNamedPaths extends Rewriter {
+case class projectNamedPaths(attributes: Attributes) extends Rewriter {
 
   case class Projectibles(paths: Map[Variable, PathExpression] = Map.empty,
                           protectedVariables: Set[Ref[LogicalVariable]] = Set.empty,
@@ -37,11 +37,11 @@ case object projectNamedPaths extends Rewriter {
     def withNamedPath(entry: (Variable, PathExpression)) = copy(paths = paths + entry)
     def withRewrittenVariable(entry: (Ref[LogicalVariable], PathExpression)) = {
       val (ref, pathExpr) = entry
-      copy(variableRewrites = variableRewrites + (ref -> pathExpr.endoRewrite(copyVariables)))
+      copy(variableRewrites = variableRewrites + (ref -> pathExpr.endoRewrite(copyVariables(attributes))))
     }
 
     def returnItems = paths.map {
-      case (ident, pathExpr) => AliasedReturnItem(pathExpr, ident)(ident.position)
+      case (ident, pathExpr) => AliasedReturnItem(pathExpr, ident)(ident.position)(attributes.copy(ident.id))
     }.toIndexedSeq
 
     def withVariableRewritesForExpression(expr: Expression) =
@@ -56,7 +56,7 @@ case object projectNamedPaths extends Rewriter {
   }
 
   object Projectibles {
-    val empty = Projectibles()
+    val empty = new Projectibles(Map.empty, Set.empty, Map.empty)
   }
 
   def apply(input: AnyRef): AnyRef = {
@@ -67,7 +67,7 @@ case object projectNamedPaths extends Rewriter {
         variableRewrites.getOrElse(Ref(ident), ident)
 
       case namedPart@NamedPatternPart(_, _: ShortestPaths) =>
-        namedPart
+        namedPart.selfThis
 
       case NamedPatternPart(_, part) =>
         part
@@ -115,7 +115,7 @@ case object projectNamedPaths extends Rewriter {
 
     case part @ NamedPatternPart(variable, patternPart) =>
       acc =>
-        val pathExpr = expressions.PathExpression(patternPartPathExpression(patternPart))(part.position)
+        val pathExpr = expressions.PathExpression(patternPartPathExpression(patternPart))(part.position)(attributes.copy(part.id))
         (acc.withNamedPath(variable -> pathExpr).withProtectedVariable(Ref(variable)), Some(identity))
   }
 

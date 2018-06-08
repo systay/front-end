@@ -15,12 +15,13 @@
  */
 package org.opencypher.v9_0.ast.semantics
 
-import org.opencypher.v9_0.expressions.{DummyExpression, ListComprehension}
+import org.opencypher.v9_0.expressions.{DummyExpression, ListComprehension, Variable}
 import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.symbols._
-import org.opencypher.v9_0.expressions.Variable
 
 class ListComprehensionTest extends SemanticFunSuite {
+  private implicit val idGen = new SequentialIdGen()
 
   val dummyExpression = DummyExpression(
     CTList(CTNode) | CTBoolean | CTList(CTString))
@@ -43,7 +44,7 @@ class ListComprehensionTest extends SemanticFunSuite {
 
   test("shouldSemanticCheckPredicateInStateContainingTypedVariable") {
     val error = SemanticError("dummy error", DummyPosition(8))
-    val predicate = ErrorExpression(error, CTAny, DummyPosition(7))
+    val predicate = ErrorExpression(error, CTAny, DummyPosition(7))()
 
     val filter = ListComprehension(Variable("x")(DummyPosition(2)), dummyExpression, Some(predicate), None)(DummyPosition(0))
     val result = SemanticExpressionCheck.simple(filter)(SemanticState.clean)

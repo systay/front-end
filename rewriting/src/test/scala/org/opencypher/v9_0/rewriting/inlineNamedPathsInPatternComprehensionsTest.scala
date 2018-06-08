@@ -19,23 +19,25 @@ import org.opencypher.v9_0.ast.AstConstructionTestSupport
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.rewriting.rewriters.{inlineNamedPathsInPatternComprehensions, projectNamedPaths}
 import org.opencypher.v9_0.util.ASTNode
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions._
 
 class inlineNamedPathsInPatternComprehensionsTest extends CypherFunSuite with AstConstructionTestSupport {
+
+  val attributes = Attributes(idGen)
 
   // [ ()-->() | 'foo' ]
   test("does not touch comprehensions without named path") {
     val input: ASTNode = PatternComprehension(None, RelationshipsPattern(RelationshipChain(NodePattern(None, Seq.empty, None) _, RelationshipPattern(None, Seq.empty, None, None, SemanticDirection.OUTGOING) _, NodePattern(None, Seq.empty, None) _) _)_, None, StringLiteral("foo")_)_
 
-    inlineNamedPathsInPatternComprehensions(input) should equal(input)
+    inlineNamedPathsInPatternComprehensions(attributes)(input) should equal(input)
   }
 
   // [ p = (a)-[r]->(b) | 'foo' ]
   test("removes named path if not used") {
     val input: PatternComprehension = PatternComprehension(Some(varFor("p")), RelationshipsPattern(RelationshipChain(NodePattern(Some(varFor("a")), Seq.empty, None) _, RelationshipPattern(Some(varFor("r")), Seq.empty, None, None, SemanticDirection.OUTGOING) _, NodePattern(Some(varFor("b")), Seq.empty, None) _) _)_, None, StringLiteral("foo")_)_
 
-    inlineNamedPathsInPatternComprehensions(input) should equal(input.copy(namedPath = None)(pos))
+    inlineNamedPathsInPatternComprehensions(attributes)(input) should equal(input.copy(namedPath = None)(pos))
   }
 
   // [ p = (a)-[r]->(b) | p ]
@@ -45,9 +47,9 @@ class inlineNamedPathsInPatternComprehensionsTest extends CypherFunSuite with As
                                                                            None, SemanticDirection.OUTGOING) _,
                                                        NodePattern(Some(varFor("b")), Seq.empty, None) _) _
     val input: PatternComprehension = PatternComprehension(Some(varFor("p")), RelationshipsPattern(element)_, None, Variable("p")_)_
-    val output = input.copy(namedPath = None, projection = PathExpression(projectNamedPaths.patternPartPathExpression(element))_)(pos)
+    val output = input.copy(namedPath = None, projection = PathExpression(projectNamedPaths(attributes).patternPartPathExpression(element))(pos))(pos)
 
-    inlineNamedPathsInPatternComprehensions(input) should equal(output)
+    inlineNamedPathsInPatternComprehensions(attributes)(input) should equal(output)
   }
 
   // [ p = (a)-[r]->(b) WHERE p | 'foo' ]
@@ -59,10 +61,10 @@ class inlineNamedPathsInPatternComprehensionsTest extends CypherFunSuite with As
     val input: PatternComprehension = PatternComprehension(Some(varFor("p")), RelationshipsPattern(element)_, Some(varFor("p")), StringLiteral("foo")_)_
     val output = input.copy(
       namedPath = None,
-      predicate = Some(PathExpression(projectNamedPaths.patternPartPathExpression(element))_)
+      predicate = Some(PathExpression(projectNamedPaths(attributes).patternPartPathExpression(element))_)
     )(pos)
 
-    inlineNamedPathsInPatternComprehensions(input) should equal(output)
+    inlineNamedPathsInPatternComprehensions(attributes)(input) should equal(output)
   }
 
 
@@ -75,10 +77,10 @@ class inlineNamedPathsInPatternComprehensionsTest extends CypherFunSuite with As
     val input: PatternComprehension = PatternComprehension(Some(varFor("p")), RelationshipsPattern(element)_, Some(varFor("p")), Variable("p")_)_
     val output = input.copy(
       namedPath = None,
-      predicate = Some(PathExpression(projectNamedPaths.patternPartPathExpression(element))_),
-      projection = PathExpression(projectNamedPaths.patternPartPathExpression(element))_
+      predicate = Some(PathExpression(projectNamedPaths(attributes).patternPartPathExpression(element))_),
+      projection = PathExpression(projectNamedPaths(attributes).patternPartPathExpression(element))(pos)
     )(pos)
 
-    inlineNamedPathsInPatternComprehensions(input) should equal(output)
+    inlineNamedPathsInPatternComprehensions(attributes)(input) should equal(output)
   }
 }

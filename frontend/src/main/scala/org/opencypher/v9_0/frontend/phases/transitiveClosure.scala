@@ -15,12 +15,12 @@
  */
 package org.opencypher.v9_0.frontend.phases
 
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.ast.Where
+import org.opencypher.v9_0.expressions.{And, Equals, Or, _}
 import org.opencypher.v9_0.util.Foldable._
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.helpers.fixedPoint
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
-import org.opencypher.v9_0.ast.Where
-import org.opencypher.v9_0.expressions.{And, Equals, Or}
 
 /**
   * TODO: This should instead implement Rewriter
@@ -30,7 +30,7 @@ import org.opencypher.v9_0.expressions.{And, Equals, Or}
   * Given a where clause, `WHERE a.prop = b.prop AND b.prop = 42` we rewrite the query
   * into `WHERE a.prop = 42 AND b.prop = 42`
   */
-case object transitiveClosure extends StatementRewriter {
+case class transitiveClosure(attributes: Attributes) extends StatementRewriter {
 
   override def description: String = "transitive closure in where clauses"
 
@@ -61,12 +61,12 @@ case object transitiveClosure extends StatementRewriter {
       case and@And(lhs, rhs) =>
         val closures = collect(lhs) ++ collect(rhs)
         val inner = andRewriter(closures)
-        val newAnd = and.copy(lhs = lhs.endoRewrite(inner), rhs = rhs.endoRewrite(inner))(and.position)
+        val newAnd = and.copy(lhs = lhs.endoRewrite(inner), rhs = rhs.endoRewrite(inner))(and.position)(SameId(and.id))
 
         //ALSO take care of case WHERE b.prop = a.prop AND b.prop = 42
         //turns into WHERE b.prop = a.prop AND b.prop = 42 AND a.prop = 42
         closures.emergentEqualities.foldLeft(newAnd) {
-          case (acc, (prop, expr)) => And(acc, Equals(prop, expr)(acc.position))(acc.position)
+          case (acc, (prop, expr)) => And(acc, Equals(prop, expr)(acc.position)(attributes.copy(acc.id)))(acc.position)(attributes.copy(acc.id))
         }
     })
 
@@ -78,7 +78,7 @@ case object transitiveClosure extends StatementRewriter {
 
       bottomUp(Rewriter.lift {
         case equals@Equals(p1: Property, p2: Property) if closures.mapping.contains(p2) =>
-          equals.copy(rhs = closures.mapping(p2))(equals.position)
+          equals.copy(rhs = closures.mapping(p2))(equals.position)(SameId(equals.id))
       }, stopOnNotEquals)
     }
   }

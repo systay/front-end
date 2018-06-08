@@ -15,13 +15,13 @@
  */
 package org.opencypher.v9_0.rewriting
 
+import org.opencypher.v9_0.ast.semantics.SemanticChecker
+import org.opencypher.v9_0.ast.{SequentialIds, Statement}
 import org.opencypher.v9_0.parser.ParserFixture.parser
 import org.opencypher.v9_0.util.Rewriter
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.ast.Statement
-import org.opencypher.v9_0.ast.semantics.SemanticChecker
 
-trait RewriteTest {
+trait RewriteTest extends SequentialIds{
   self: CypherFunSuite =>
 
   def rewriterUnderTest: Rewriter
@@ -31,6 +31,15 @@ trait RewriteTest {
     val expected = parseForRewriting(expectedQuery)
     SemanticChecker.check(original)
     val result = rewrite(original)
+    if(result != expected)
+      if (result == original) {
+        fail(s"Expected the query to be rewritten, but it did not change. \n$originalQuery")
+      } else
+        fail(
+          s"""The query was rewritten in the wrong way.
+             |Expected: $expected
+             |   Found: $result""".stripMargin)
+
     assert(result === expected, "\n" + originalQuery)
   }
 

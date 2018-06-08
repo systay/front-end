@@ -17,9 +17,11 @@ package org.opencypher.v9_0.ast.semantics
 
 import org.opencypher.v9_0.expressions.{ContainerIndex, DecimalDoubleLiteral, DummyExpression, SignedDecimalIntegerLiteral}
 import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.symbols._
 
 class ContainerIndexTest extends SemanticFunSuite {
+  private implicit val idGen = new SequentialIdGen()
 
   val dummyString = DummyExpression(CTString)
   val dummyInteger = DummyExpression(CTInteger)

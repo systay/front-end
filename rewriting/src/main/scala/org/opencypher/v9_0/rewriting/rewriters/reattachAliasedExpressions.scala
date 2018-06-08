@@ -17,6 +17,7 @@ package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.ast.{Return, ReturnItem, With}
 import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.util.attribution.SameId
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 
 case object reattachAliasedExpressions extends Rewriter {
@@ -27,13 +28,13 @@ case object reattachAliasedExpressions extends Rewriter {
       val innerRewriter = expressionRewriter(clause.returnItems.items)
       clause.copy(
         orderBy = clause.orderBy.endoRewrite(innerRewriter)
-      )(clause.position)
+      )(clause.position)(SameId(clause.id))
 
     case clause: With =>
       val innerRewriter = expressionRewriter(clause.returnItems.items)
       clause.copy(
         orderBy = clause.orderBy.endoRewrite(innerRewriter)
-      )(clause.position)
+      )(clause.position)(SameId(clause.id))
   })
 
   private def expressionRewriter(items: Seq[ReturnItem]): Rewriter = {

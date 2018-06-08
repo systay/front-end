@@ -17,9 +17,11 @@ package org.opencypher.v9_0.ast.semantics
 
 import org.opencypher.v9_0.expressions.{DecimalDoubleLiteral, DummyExpression, ListSlice, SignedDecimalIntegerLiteral}
 import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.symbols._
 
 class ListSliceTest extends SemanticFunSuite {
+  private implicit val idGen = new SequentialIdGen()
   val dummyList = DummyExpression(
     CTList(CTNode) | CTNode | CTList(CTString))
 

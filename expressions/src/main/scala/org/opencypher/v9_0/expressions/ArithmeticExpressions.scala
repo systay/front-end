@@ -16,15 +16,16 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.symbols._
 
-case class Add(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Add(lhs: Expression, rhs: Expression)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends Expression with BinaryOperatorExpression {
 
   override def canonicalOperatorSymbol = "+"
 }
 
-case class UnaryAdd(rhs: Expression)(val position: InputPosition)
+case class UnaryAdd(rhs: Expression)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends Expression with LeftUnaryOperatorExpression {
 
   override val signatures = Vector(
@@ -35,7 +36,7 @@ case class UnaryAdd(rhs: Expression)(val position: InputPosition)
   override def canonicalOperatorSymbol = "+"
 }
 
-case class Subtract(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Subtract(lhs: Expression, rhs: Expression)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends Expression with BinaryOperatorExpression {
 
   override val signatures = Vector(
@@ -53,7 +54,7 @@ case class Subtract(lhs: Expression, rhs: Expression)(val position: InputPositio
   override def canonicalOperatorSymbol = "-"
 }
 
-case class UnarySubtract(rhs: Expression)(val position: InputPosition)
+case class UnarySubtract(rhs: Expression)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends Expression with LeftUnaryOperatorExpression {
 
   override val signatures = Vector(
@@ -64,7 +65,7 @@ case class UnarySubtract(rhs: Expression)(val position: InputPosition)
   override def canonicalOperatorSymbol = "-"
 }
 
-case class Multiply(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Multiply(lhs: Expression, rhs: Expression)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends Expression with BinaryOperatorExpression {
 
   // 1 * 1 => 1
@@ -84,7 +85,7 @@ case class Multiply(lhs: Expression, rhs: Expression)(val position: InputPositio
   override def canonicalOperatorSymbol = "*"
 }
 
-case class Divide(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Divide(lhs: Expression, rhs: Expression)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends Expression with BinaryOperatorExpression {
 
   // 1 / 1 => 1
@@ -102,7 +103,7 @@ case class Divide(lhs: Expression, rhs: Expression)(val position: InputPosition)
   override def canonicalOperatorSymbol = "/"
 }
 
-case class Modulo(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Modulo(lhs: Expression, rhs: Expression)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends Expression with BinaryOperatorExpression {
 
   // 1 % 1 => 0
@@ -118,7 +119,7 @@ case class Modulo(lhs: Expression, rhs: Expression)(val position: InputPosition)
   override def canonicalOperatorSymbol = "%"
 }
 
-case class Pow(lhs: Expression, rhs: Expression)(val position: InputPosition)
+case class Pow(lhs: Expression, rhs: Expression)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends Expression with BinaryOperatorExpression {
 
   // 1 ^ 1 => 1.1

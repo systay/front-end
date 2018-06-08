@@ -16,6 +16,7 @@
 package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.rewriting.rewriters.inliningContextCreator
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 
@@ -31,7 +32,7 @@ class InliningContextCreatorTest extends CypherFunSuite with AstRewritingTestSup
   test("should not spoil aliased node variables") {
     val ast = parser.parse("match (a) with a as b match (b) return b")
 
-    val context = inliningContextCreator(ast)
+    val context = inliningContextCreator(Attributes(idGen))(ast)
 
     context.projections should equal(Map(identB -> identA))
     context.alias(identB) should equal(Some(identA))
@@ -40,7 +41,7 @@ class InliningContextCreatorTest extends CypherFunSuite with AstRewritingTestSup
   test("should ignore named shortest paths") {
     val ast = parser.parse("match p = shortestPath((a)-[r]->(b)) return p")
 
-    val context = inliningContextCreator(ast)
+    val context = inliningContextCreator(Attributes(idGen))(ast)
 
     context.projections should equal(Map.empty)
   }
@@ -48,7 +49,7 @@ class InliningContextCreatorTest extends CypherFunSuite with AstRewritingTestSup
   test("should not spoil aliased relationship variables") {
     val ast = parser.parse("match ()-[a]->() with a as b match ()-[b]->() return b")
 
-    val context = inliningContextCreator(ast)
+    val context = inliningContextCreator(Attributes(idGen))(ast)
 
     context.projections should equal(Map(identB -> identA))
     context.alias(identB) should equal(Some(identA))
@@ -57,7 +58,7 @@ class InliningContextCreatorTest extends CypherFunSuite with AstRewritingTestSup
   test("should spoil all the variables when WITH has aggregations") {
     val ast = parser.parse("match (a)-[r]->(b) with a as `x1`, count(r) as `x2` return x1, x2")
 
-    val context = inliningContextCreator(ast)
+    val context = inliningContextCreator(Attributes(idGen))(ast)
 
     context.projections should equal(Map.empty)
   }

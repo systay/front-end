@@ -15,62 +15,61 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.expressions.LogicalVariable
+import org.opencypher.v9_0.expressions.{LogicalVariable, Variable}
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions.Variable
 
-class ConnectedComponentsTest extends CypherFunSuite {
+class ConnectedComponentsTest extends CypherFunSuite with AstConstructionTestSupport {
   import connectedComponents._
 
   test("(a)->(b), (c)->(d) has two connected components") {
     val disconnected = connectedComponents(Vector(
-      ComponentPart(varFor("a"), varFor("b")),
-      ComponentPart(varFor("c"), varFor("d"))))
+      ComponentPart(logicalVarFor("a"), logicalVarFor("b")),
+      ComponentPart(logicalVarFor("c"), logicalVarFor("d"))))
 
     disconnected should equal(Vector(
-      ConnectedComponent(ComponentPart(varFor("a"), varFor("b"))),
-        ConnectedComponent(ComponentPart(varFor("c"), varFor("d")))
+      ConnectedComponent(ComponentPart(logicalVarFor("a"), logicalVarFor("b"))),
+        ConnectedComponent(ComponentPart(logicalVarFor("c"), logicalVarFor("d")))
       ))
   }
 
   test("(a)->(b)->(c) does contain one connected component") {
     val disconnected = connectedComponents(Vector(
-      ComponentPart(varFor("a"), varFor("b")),
-      ComponentPart(varFor("b"), varFor("c"))))
+      ComponentPart(logicalVarFor("a"), logicalVarFor("b")),
+      ComponentPart(logicalVarFor("b"), logicalVarFor("c"))))
 
     disconnected should equal(Vector(
-      ConnectedComponent(ComponentPart(varFor("a"), varFor("b")),
-        ComponentPart(varFor("b"), varFor("c")))))
+      ConnectedComponent(ComponentPart(logicalVarFor("a"), logicalVarFor("b")),
+        ComponentPart(logicalVarFor("b"), logicalVarFor("c")))))
   }
 
   test("(a)->(b)->(c)->(d) does only contain one component") {
     val disconnected = connectedComponents(Vector(
-      ComponentPart(varFor("a"), varFor("b")),
-      ComponentPart(varFor("b"), varFor("c")),
-      ComponentPart(varFor("c"), varFor("d"))
+      ComponentPart(logicalVarFor("a"), logicalVarFor("b")),
+      ComponentPart(logicalVarFor("b"), logicalVarFor("c")),
+      ComponentPart(logicalVarFor("c"), logicalVarFor("d"))
     ))
 
     disconnected shouldBe Vector(ConnectedComponent(
-      ComponentPart(varFor("a"), varFor("b")),
-      ComponentPart(varFor("b"), varFor("c")),
-      ComponentPart(varFor("c"), varFor("d")))
+      ComponentPart(logicalVarFor("a"), logicalVarFor("b")),
+      ComponentPart(logicalVarFor("b"), logicalVarFor("c")),
+      ComponentPart(logicalVarFor("c"), logicalVarFor("d")))
     )
   }
 
   test("(a)->(b)->(c)-(a) contains one component ") {
     val disconnected = connectedComponents(Vector
     (
-      ComponentPart(varFor("a"), varFor("b")),
-      ComponentPart(varFor("b"), varFor("c")),
-      ComponentPart(varFor("c"), varFor("a"))
+      ComponentPart(logicalVarFor("a"), logicalVarFor("b")),
+      ComponentPart(logicalVarFor("b"), logicalVarFor("c")),
+      ComponentPart(logicalVarFor("c"), logicalVarFor("a"))
     ))
 
     disconnected shouldBe Vector(ConnectedComponent(
-      ComponentPart(varFor("a"), varFor("b")),
-      ComponentPart(varFor("b"), varFor("c")),
-      ComponentPart(varFor("c"), varFor("a"))
+      ComponentPart(logicalVarFor("a"), logicalVarFor("b")),
+      ComponentPart(logicalVarFor("b"), logicalVarFor("c")),
+      ComponentPart(logicalVarFor("c"), logicalVarFor("a"))
     ))
   }
 
-  private def varFor(name: String): LogicalVariable = Variable(name)(null)
+  private def logicalVarFor(name: String): LogicalVariable = Variable(name)(null)
 }

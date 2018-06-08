@@ -15,11 +15,14 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 import org.opencypher.v9_0.expressions.Variable
+import org.opencypher.v9_0.util.attribution.Attributes
+import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 
-case object copyVariables extends  Rewriter {
-  private val instance = bottomUp(Rewriter.lift { case variable: Variable => variable.copyId })
+case class copyVariables(attributes: Attributes) extends Rewriter {
+  private val instance = bottomUp(Rewriter.lift {
+    case variable: Variable => variable.copy()(variable.position)(attributes.copy(variable.id))
+  })
 
   def apply(that: AnyRef): AnyRef = instance.apply(that)
 }

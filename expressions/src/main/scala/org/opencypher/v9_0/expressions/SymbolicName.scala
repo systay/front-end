@@ -15,6 +15,7 @@
  */
 package org.opencypher.v9_0.expressions
 
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.{ASTNode, InputPosition}
 
 trait SymbolicName extends ASTNode {
@@ -23,14 +24,14 @@ trait SymbolicName extends ASTNode {
   override def asCanonicalStringVal: String = name
 }
 
-case class Namespace(parts: List[String] = List.empty)(val position: InputPosition) extends ASTNode
+case class Namespace(parts: List[String] = List.empty)(val position: InputPosition)(implicit override val idGen: IdGen) extends ASTNode
 
-case class ProcedureName(name: String)(val position: InputPosition) extends ASTNode with SymbolicName
+case class ProcedureName(name: String)(val position: InputPosition)(implicit override val idGen: IdGen) extends ASTNode with SymbolicName
 
-case class ProcedureOutput(name: String)(val position: InputPosition) extends ASTNode with SymbolicName
+case class ProcedureOutput(name: String)(val position: InputPosition)(implicit override val idGen: IdGen) extends ASTNode with SymbolicName
 
-case class LabelName(name: String)(val position: InputPosition) extends SymbolicName
+case class LabelName(name: String)(val position: InputPosition)(implicit override val idGen: IdGen) extends SymbolicName
 
-case class PropertyKeyName(name: String)(val position: InputPosition) extends SymbolicName
+case class PropertyKeyName(name: String)(val position: InputPosition)(implicit override val idGen: IdGen) extends SymbolicName
 
-case class RelTypeName(name: String)(val position: InputPosition) extends SymbolicName
+case class RelTypeName(name: String)(val position: InputPosition)(implicit override val idGen: IdGen) extends SymbolicName

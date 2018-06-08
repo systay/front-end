@@ -16,10 +16,10 @@
 package org.opencypher.v9_0.ast
 
 import org.opencypher.v9_0.ast.semantics.SemanticCheckResult.success
-import org.opencypher.v9_0.ast.semantics._
+import org.opencypher.v9_0.ast.semantics.{Scope, SemanticAnalysisTooling, SemanticCheckResult, SemanticCheckable, SemanticExpressionCheck, SemanticState, _}
 import org.opencypher.v9_0.expressions.{Expression, LogicalVariable, MapProjection}
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.{ASTNode, InputPosition, InternalException}
-import org.opencypher.v9_0.ast.semantics.{Scope, SemanticAnalysisTooling, SemanticCheckResult, SemanticCheckable, SemanticExpressionCheck, SemanticState}
 
 sealed trait ReturnItemsDef extends ASTNode with SemanticCheckable with SemanticAnalysisTooling {
   /**
@@ -36,7 +36,7 @@ sealed trait ReturnItemsDef extends ASTNode with SemanticCheckable with Semantic
   def isStarOnly: Boolean = includeExisting && items.isEmpty
 }
 
-final case class DiscardCardinality()(val position: InputPosition) extends ReturnItemsDef {
+final case class DiscardCardinality()(val position: InputPosition)(implicit override val idGen: IdGen) extends ReturnItemsDef {
   override def includeExisting: Boolean = false
   override def semanticCheck: SemanticCheck = _success
   override def items: Seq[ReturnItem] = Seq.empty
@@ -49,7 +49,7 @@ final case class DiscardCardinality()(val position: InputPosition) extends Retur
 final case class ReturnItems(
                               includeExisting: Boolean,
                               items: Seq[ReturnItem]
-                            )(val position: InputPosition) extends ReturnItemsDef with SemanticAnalysisTooling {
+                            )(val position: InputPosition)(implicit override val idGen: IdGen) extends ReturnItemsDef with SemanticAnalysisTooling {
 
   override def withExisting(includeExisting: Boolean): ReturnItemsDef =
     copy(includeExisting = includeExisting)(position)
@@ -97,7 +97,7 @@ sealed trait ReturnItem extends ASTNode with SemanticCheckable {
   def semanticCheck = SemanticExpressionCheck.check(Expression.SemanticContext.Results, expression)
 }
 
-case class UnaliasedReturnItem(expression: Expression, inputText: String)(val position: InputPosition) extends ReturnItem {
+case class UnaliasedReturnItem(expression: Expression, inputText: String)(val position: InputPosition)(implicit override val idGen: IdGen) extends ReturnItem {
   val alias = expression match {
     case i: LogicalVariable => Some(i.bumpId)
     case x: MapProjection => Some(x.name.bumpId)
@@ -110,11 +110,11 @@ case class UnaliasedReturnItem(expression: Expression, inputText: String)(val po
 }
 
 object AliasedReturnItem {
-  def apply(v:LogicalVariable):AliasedReturnItem = AliasedReturnItem(v.copyId, v.copyId)(v.position)
+  def apply(v:LogicalVariable)(implicit idGen: IdGen): AliasedReturnItem = AliasedReturnItem(v.copyId, v.copyId)(v.position)
 }
 
 //TODO variable should not be a Variable. A Variable is an expression, and the return item alias isn't
-case class AliasedReturnItem(expression: Expression, variable: LogicalVariable)(val position: InputPosition) extends ReturnItem {
+case class AliasedReturnItem(expression: Expression, variable: LogicalVariable)(val position: InputPosition)(implicit override val idGen: IdGen) extends ReturnItem {
   val alias = Some(variable)
   val name = variable.name
 

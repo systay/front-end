@@ -19,6 +19,7 @@ import org.opencypher.v9_0.ast.semantics.{SemanticCheckResult, SemanticErrorDef,
 import org.opencypher.v9_0.ast.{AstConstructionTestSupport, Query}
 import org.opencypher.v9_0.frontend.phases._
 import org.opencypher.v9_0.parser.ParserTest
+import org.opencypher.v9_0.util.attribution.{Attributes, IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.spi.MapToPublicExceptions
 import org.opencypher.v9_0.util.symbols.CypherType
 import org.opencypher.v9_0.util.{CypherException, InputPosition}
@@ -402,7 +403,7 @@ class MultipleGraphClauseSemanticCheckingTest
   }
 
   override def convert(astNode: ast.Statement): SemanticCheckResult = {
-    val rewritten = PreparatoryRewriting.transform(TestState(Some(astNode)), TestContext).statement()
+    val rewritten = PreparatoryRewriting(Attributes(new SequentialIdGen())).transform(TestState(Some(astNode)), TestContext).statement()
     val initialState = SemanticState.clean.withFeatures(SemanticFeature.MultipleGraphs, SemanticFeature.WithInitialQuerySignature)
     rewritten.semanticCheck(initialState)
   }
@@ -465,6 +466,9 @@ class MultipleGraphClauseSemanticCheckingTest
     override def monitors = mock[Monitors]
 
     override def errorHandler = _ => ()
+
+    override val astIdGen: IdGen = new SequentialIdGen()
   }
+
 
 }

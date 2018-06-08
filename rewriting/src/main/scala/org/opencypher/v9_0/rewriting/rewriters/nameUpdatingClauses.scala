@@ -17,24 +17,25 @@ package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.ast.{Create, CreateUnique, Merge}
 import org.opencypher.v9_0.expressions.Expression
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 
-case object nameUpdatingClauses extends Rewriter {
+case class nameUpdatingClauses(attributes: Attributes) extends Rewriter {
 
   def apply(that: AnyRef): AnyRef = instance(that)
 
   private val findingRewriter: Rewriter = Rewriter.lift {
     case createUnique@CreateUnique(pattern) =>
-      val rewrittenPattern = pattern.endoRewrite(nameAllPatternElements.namingRewriter)
-      createUnique.copy(pattern = rewrittenPattern)(createUnique.position)
+      val rewrittenPattern = pattern.endoRewrite(nameAllPatternElements(attributes))
+      createUnique.copy(pattern = rewrittenPattern)(createUnique.position)(SameId(createUnique.id))
 
     case create@Create(pattern) =>
-      val rewrittenPattern = pattern.endoRewrite(nameAllPatternElements.namingRewriter)
-      create.copy(pattern = rewrittenPattern)(create.position)
+      val rewrittenPattern = pattern.endoRewrite(nameAllPatternElements(attributes))
+      create.copy(pattern = rewrittenPattern)(create.position)(SameId(create.id))
 
     case merge@Merge(pattern, _, _) =>
-      val rewrittenPattern = pattern.endoRewrite(nameAllPatternElements.namingRewriter)
-      merge.copy(pattern = rewrittenPattern)(merge.position)
+      val rewrittenPattern = pattern.endoRewrite(nameAllPatternElements(attributes))
+      merge.copy(pattern = rewrittenPattern)(merge.position)(SameId(merge.id))
   }
 
   private val instance = bottomUp(findingRewriter, _.isInstanceOf[Expression])

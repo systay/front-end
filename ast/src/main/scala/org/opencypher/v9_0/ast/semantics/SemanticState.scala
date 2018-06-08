@@ -16,12 +16,12 @@
 package org.opencypher.v9_0.ast.semantics
 
 import org.opencypher.v9_0.ast.ASTAnnotationMap
-import org.opencypher.v9_0.expressions.{Expression, LogicalVariable}
+import org.opencypher.v9_0.ast.semantics.SemanticState.ScopeLocation
+import org.opencypher.v9_0.expressions.{Expression, LogicalVariable, Variable}
 import org.opencypher.v9_0.util._
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.helpers.{TreeElem, TreeZipper}
 import org.opencypher.v9_0.util.symbols.{TypeSpec, _}
-import org.opencypher.v9_0.ast.semantics.SemanticState.ScopeLocation
-import org.opencypher.v9_0.expressions.Variable
 
 import scala.collection.immutable.HashMap
 import scala.language.postfixOps
@@ -34,7 +34,7 @@ object SymbolUse {
 final case class SymbolUse(name: String, position: InputPosition) {
   override def toString = s"SymbolUse($nameWithPosition)"
 
-  def asVariable: Variable = Variable(name)(position)
+  def asVariable(implicit idGen: IdGen): Variable = Variable(name)(position)
 
   def nameWithPosition = s"$name@${position.toOffsetString}"
 }

@@ -17,12 +17,13 @@ package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.rewriting.rewriters.foldConstants
 import org.opencypher.v9_0.util.Rewriter
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.helpers.fixedPoint
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class FoldConstantsTest extends CypherFunSuite with RewriteTest {
 
-  val rewriterUnderTest: Rewriter = fixedPoint(foldConstants)
+  val rewriterUnderTest: Rewriter = fixedPoint(foldConstants(Attributes(idGen)))
 
   test("solve literal expressions") {
     assertRewrite("RETURN 1+1 AS r", "RETURN 2 AS r")

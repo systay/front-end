@@ -17,21 +17,21 @@ package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.util._
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 
-object PatternExpressionPatternElementNamer {
+case class PatternExpressionPatternElementNamer(attributes: Attributes) {
 
   def apply(expr: PatternExpression): (PatternExpression, Map[PatternElement, Variable]) = {
     val unnamedMap = nameUnnamedPatternElements(expr.pattern)
     val namedPattern = expr.pattern.endoRewrite(namePatternElementsFromMap(unnamedMap))
-    val namedExpr = expr.copy(pattern = namedPattern)
+    val namedExpr = expr.copy(pattern = namedPattern)(SameId(expr.id))
     (namedExpr, unnamedMap)
   }
 
   def apply(expr: PatternComprehension): (PatternComprehension, Map[PatternElement, Variable]) = {
     val unnamedMap = nameUnnamedPatternElements(expr.pattern)
     val namedPattern = expr.pattern.endoRewrite(namePatternElementsFromMap(unnamedMap))
-    val namedExpr = expr.copy(pattern = namedPattern)(expr.position)
+    val namedExpr = expr.copy(pattern = namedPattern)(expr.position)(SameId(expr.id))
     (namedExpr, unnamedMap)
   }
 
@@ -39,9 +39,9 @@ object PatternExpressionPatternElementNamer {
     val unnamedElements = findPatternElements(pattern).filter(_.variable.isEmpty)
     IdentityMap(unnamedElements.map {
       case elem: NodePattern =>
-        elem -> Variable(NodeNameGenerator.name(elem.position.bumped()))(elem.position)
+        elem -> Variable(NodeNameGenerator.name(elem.position.bumped()))(elem.position)(attributes.copy(elem.id))
       case elem@RelationshipChain(_, relPattern, _) =>
-        elem -> Variable(RelNameGenerator.name(relPattern.position.bumped()))(relPattern.position)
+        elem -> Variable(RelNameGenerator.name(relPattern.position.bumped()))(relPattern.position)(attributes.copy(relPattern.id))
     }: _*)
   }
 
@@ -60,10 +60,11 @@ object PatternExpressionPatternElementNamer {
 
     private val instance: Rewriter = topDown(Rewriter.lift {
       case pattern: NodePattern if map.contains(pattern) =>
-        pattern.copy(variable = Some(map(pattern)))(pattern.position)
+        pattern.copy(variable = Some(map(pattern)))(pattern.position)(SameId(pattern.id))
       case pattern: RelationshipChain if map.contains(pattern) =>
         val rel = pattern.relationship
-        pattern.copy(relationship = rel.copy(variable = Some(map(pattern)))(rel.position))(pattern.position)
+        val relationshipPattern = rel.copy(variable = Some(map(pattern)))(rel.position)(SameId(rel.id))
+        pattern.copy(relationship = relationshipPattern)(pattern.position)(SameId(pattern.id))
     })
   }
 }

@@ -19,7 +19,7 @@ import org.opencypher.v9_0.expressions.Add
 import org.opencypher.v9_0.util.DummyPosition
 import org.opencypher.v9_0.util.symbols._
 
-class AddTest extends InfixExpressionTestBase(Add(_, _)(DummyPosition(0))) {
+class AddTest extends InfixExpressionTestBase(Add(_, _)(DummyPosition(0))(_)) {
 
   // Infix specializations:
   // "a" + "b" => "ab"

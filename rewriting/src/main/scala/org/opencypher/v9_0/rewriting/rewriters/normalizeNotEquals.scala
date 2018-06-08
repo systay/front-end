@@ -15,16 +15,17 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.expressions.{Equals, NotEquals}
+import org.opencypher.v9_0.expressions.{Equals, Not, NotEquals}
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.{Rewriter, topDown}
-import org.opencypher.v9_0.expressions.{Equals, Not}
 
-case object normalizeNotEquals extends Rewriter {
+case class normalizeNotEquals(attributes: Attributes) extends Rewriter {
 
   override def apply(that: AnyRef): AnyRef = instance(that)
 
   private val instance: Rewriter = topDown(Rewriter.lift {
+    // not(1 = 2)  <!===!>     1 != 2
     case p @ NotEquals(lhs, rhs) =>
-      Not(Equals(lhs, rhs)(p.position))(p.position)   // not(1 = 2)  <!===!>     1 != 2
+      Not(Equals(lhs, rhs)(p.position)(attributes.copy(p.id)))(p.position)(attributes.copy(p.id))
   })
 }

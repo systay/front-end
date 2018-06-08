@@ -16,13 +16,14 @@
 package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.expressions.PatternComprehension
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 
-case object namePatternComprehensionPatternElements extends Rewriter {
+case class namePatternComprehensionPatternElements(attributes: Attributes) extends Rewriter {
 
   private val instance = bottomUp(Rewriter.lift {
     case expr: PatternComprehension =>
-      val (namedComprehension, _) = PatternExpressionPatternElementNamer(expr)
+      val (namedComprehension, _) = PatternExpressionPatternElementNamer(attributes)(expr)
       namedComprehension
   })
 

@@ -15,18 +15,17 @@
  */
 package org.opencypher.v9_0.rewriting.conditions
 
-import org.opencypher.v9_0.expressions._
-import org.opencypher.v9_0.expressions.Equals
+import org.opencypher.v9_0.expressions.{Equals, _}
 import org.opencypher.v9_0.rewriting.Condition
 
 case object normalizedEqualsArguments extends Condition {
   def apply(that: Any): Seq[String] = {
     val equals = collectNodesOfType[Equals].apply(that)
     equals.collect {
-      case eq@Equals(expr, Property(_,_)) if !expr.isInstanceOf[Property] && notIdFunction(expr) =>
-        s"Equals at ${eq.position} is not normalized: $eq"
-      case eq@Equals(expr, func@FunctionInvocation(_, _, _, _)) if isIdFunction(func) && notIdFunction(expr) =>
-        s"Equals at ${eq.position} is not normalized: $eq"
+      case eq@Equals(expr, _: Property) if !expr.isInstanceOf[Property] && notIdFunction(expr) =>
+        s"Equals at ${eq.position} is not normalized: ${eq.toString}"
+      case eq@Equals(expr, func: FunctionInvocation) if isIdFunction(func) && notIdFunction(expr) =>
+        s"Equals at ${eq.position} is not normalized: ${eq.toString}"
     }
   }
 

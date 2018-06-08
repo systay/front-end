@@ -16,8 +16,9 @@
 package org.opencypher.v9_0.ast
 
 import org.opencypher.v9_0.expressions.Expression
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.{ASTNode, InputPosition}
 
-case class Limit(expression: Expression)(val position: InputPosition) extends ASTNode with ASTSlicingPhrase {
+case class Limit(expression: Expression)(val position: InputPosition)(implicit override val idGen: IdGen) extends ASTNode with ASTSlicingPhrase {
   override def name = "LIMIT" // ASTSlicingPhrase name
 }

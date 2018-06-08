@@ -15,15 +15,16 @@
  */
 package org.opencypher.v9_0.rewriting
 
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.util.{Rewriter, SyntaxException}
 import org.opencypher.v9_0.ast.AstConstructionTestSupport
 import org.opencypher.v9_0.ast.semantics.{SemanticState, SyntaxExceptionCreator}
 import org.opencypher.v9_0.rewriting.rewriters.normalizeWithClauses
+import org.opencypher.v9_0.util.attribution.Attributes
+import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
+import org.opencypher.v9_0.util.{Rewriter, SyntaxException}
 
 class NormalizeWithClausesTest extends CypherFunSuite with RewriteTest with AstConstructionTestSupport {
   val mkException = new SyntaxExceptionCreator("<Query>", Some(pos))
-  val rewriterUnderTest: Rewriter = normalizeWithClauses(mkException)
+  val rewriterUnderTest: Rewriter = normalizeWithClauses(mkException, Attributes(idGen))
 
   test("ensure variables are aliased") {
     assertRewrite(

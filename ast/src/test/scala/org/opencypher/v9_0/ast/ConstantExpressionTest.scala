@@ -15,12 +15,14 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{Parameter, _}
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions.Parameter
 
 class ConstantExpressionTest extends CypherFunSuite {
+  private implicit val idGen = new SequentialIdGen()
+
   test("tests") {
     assertIsConstant(SignedDecimalIntegerLiteral("42")(null))
     assertIsConstant(Parameter("42", CTAny)(null))

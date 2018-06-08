@@ -15,14 +15,14 @@
  */
 package org.opencypher.v9_0.frontend.phases
 
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{In, Variable, _}
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
-import org.opencypher.v9_0.expressions.{In, Variable}
 
 /*
 TODO: This should implement Rewriter instead
  */
-case object rewriteEqualityToInPredicate extends StatementRewriter {
+case class rewriteEqualityToInPredicate(attributes: Attributes) extends StatementRewriter {
 
   override def description: String = "normalize equality predicates into IN comparisons"
 
@@ -30,15 +30,15 @@ case object rewriteEqualityToInPredicate extends StatementRewriter {
     // id(a) = value => id(a) IN [value]
     case predicate@Equals(func@FunctionInvocation(_, _, _, IndexedSeq(idExpr)), idValueExpr)
       if func.function == functions.Id =>
-      In(func, ListLiteral(Seq(idValueExpr))(idValueExpr.position))(predicate.position)
+      In(func.selfThis, ListLiteral(Seq(idValueExpr))(idValueExpr.position)(attributes.copy(idValueExpr.id)))(predicate.position)(attributes.copy(predicate.id))
 
     // Equality between two property lookups should not be rewritten
     case predicate@Equals(_:Property, _:Property) =>
-      predicate
+      predicate.selfThis
 
     // a.prop = value => a.prop IN [value]
     case predicate@Equals(prop@Property(id: Variable, propKeyName), idValueExpr) =>
-      In(prop, ListLiteral(Seq(idValueExpr))(idValueExpr.position))(predicate.position)
+      In(prop.selfThis, ListLiteral(Seq(idValueExpr))(idValueExpr.position)(attributes.copy(idValueExpr.id)))(predicate.position)(attributes.copy(predicate.id))
   })
 
   override def postConditions: Set[Condition] = Set.empty

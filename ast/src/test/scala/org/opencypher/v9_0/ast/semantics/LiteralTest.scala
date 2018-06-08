@@ -16,9 +16,11 @@
 package org.opencypher.v9_0.ast.semantics
 
 import org.opencypher.v9_0.expressions.{Literal, StringLiteral, UnsignedDecimalIntegerLiteral}
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.symbols._
 
 class LiteralTest extends SemanticFunSuite {
+  private implicit val idGen: IdGen = new SequentialIdGen()
   test("has type CTString") {
     val literal = StringLiteral("foo")(pos)
     val result = SemanticExpressionCheck.simple(literal)(SemanticState.clean)

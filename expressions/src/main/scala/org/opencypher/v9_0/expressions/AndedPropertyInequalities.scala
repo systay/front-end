@@ -16,11 +16,12 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.NonEmptyList
+import org.opencypher.v9_0.util.attribution.IdGen
 
 case class AndedPropertyInequalities(
                                       variable: LogicalVariable,
                                       property: LogicalProperty,
                                       inequalities: NonEmptyList[InequalityExpression]
-                                    ) extends Expression {
+                                    )(implicit override val idGen: IdGen) extends Expression {
   def position = variable.position
 }

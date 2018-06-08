@@ -19,14 +19,16 @@ import org.opencypher.v9_0.ast._
 import org.opencypher.v9_0.expressions.{GetDegree, GreaterThan}
 import org.opencypher.v9_0.parser.ParserFixture.parser
 import org.opencypher.v9_0.rewriting.rewriters.{LabelPredicateNormalizer, MatchPredicateNormalization, PropertyPredicateNormalizer}
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.util.{Rewriter, inSequence}
 
 class MatchPredicateNormalizerTest extends CypherFunSuite with RewriteTest {
 
-  object PropertyPredicateNormalization extends MatchPredicateNormalization(PropertyPredicateNormalizer, getDegreeRewriting = true)
+  val attributes = Attributes(idGen)
+  object PropertyPredicateNormalization extends MatchPredicateNormalization(PropertyPredicateNormalizer(attributes), getDegreeRewriting = true, attributes)
 
-  object LabelPredicateNormalization extends MatchPredicateNormalization(LabelPredicateNormalizer, getDegreeRewriting = true)
+  object LabelPredicateNormalization extends MatchPredicateNormalization(LabelPredicateNormalizer(attributes), getDegreeRewriting = true, attributes)
 
   def rewriterUnderTest: Rewriter = inSequence(
     PropertyPredicateNormalization,
@@ -173,8 +175,9 @@ class MatchPredicateNormalizerTest extends CypherFunSuite with RewriteTest {
   }
 
   test("does not rewrite getDegree if turned off") {
-    val rewriter1 = new MatchPredicateNormalization(PropertyPredicateNormalizer, getDegreeRewriting = false) {}
-    val rewriter2 = new MatchPredicateNormalization(LabelPredicateNormalizer, getDegreeRewriting = false) {}
+    val attributes = Attributes(idGen)
+    val rewriter1 = new MatchPredicateNormalization(PropertyPredicateNormalizer(attributes), getDegreeRewriting = false, attributes) {}
+    val rewriter2 = new MatchPredicateNormalization(LabelPredicateNormalizer(attributes), getDegreeRewriting = false, attributes) {}
 
     val rewriterUnderTest: Rewriter = inSequence(
       rewriter1,

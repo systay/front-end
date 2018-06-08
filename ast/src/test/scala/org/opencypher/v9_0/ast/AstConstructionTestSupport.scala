@@ -21,8 +21,9 @@ import org.opencypher.v9_0.util.{DummyPosition, InputPosition}
 
 import scala.language.implicitConversions
 
-trait AstConstructionTestSupport extends CypherTestSupport {
-  protected val pos = DummyPosition(0)
+trait AstConstructionTestSupport extends CypherTestSupport with SequentialIds {
+
+  val pos = DummyPosition(0)
 
   implicit def withPos[T](expr: InputPosition => T): T = expr(pos)
 
@@ -43,6 +44,9 @@ trait AstConstructionTestSupport extends CypherTestSupport {
 
   def literalInt(intValue: Int): SignedDecimalIntegerLiteral =
     SignedDecimalIntegerLiteral(intValue.toString)(pos)
+
+  def literalString(value: String): StringLiteral =
+    StringLiteral(value)(pos)
 
   def literalFloat(floatValue: Double): DecimalDoubleLiteral =
     DecimalDoubleLiteral(floatValue.toString)(pos)

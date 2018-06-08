@@ -15,12 +15,12 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.ast.semantics.SemanticExpressionCheck
-import org.opencypher.v9_0.expressions.{Expression, LogicalVariable}
-import org.opencypher.v9_0.util.{ASTNode, InputPosition}
 import org.opencypher.v9_0.ast.semantics.{SemanticCheckable, SemanticExpressionCheck}
+import org.opencypher.v9_0.expressions.{Expression, LogicalVariable}
+import org.opencypher.v9_0.util.attribution.IdGen
+import org.opencypher.v9_0.util.{ASTNode, InputPosition}
 
-case class OrderBy(sortItems: Seq[SortItem])(val position: InputPosition) extends ASTNode with SemanticCheckable {
+case class OrderBy(sortItems: Seq[SortItem])(val position: InputPosition)(implicit override val idGen: IdGen) extends ASTNode with SemanticCheckable {
   def semanticCheck = sortItems.semanticCheck
 
   def dependencies: Set[LogicalVariable] =
@@ -34,11 +34,11 @@ sealed trait SortItem extends ASTNode with SemanticCheckable {
   def mapExpression(f: Expression => Expression): SortItem
 }
 
-case class AscSortItem(expression: Expression)(val position: InputPosition) extends SortItem {
+case class AscSortItem(expression: Expression)(val position: InputPosition)(implicit override val idGen: IdGen) extends SortItem {
   override def mapExpression(f: Expression => Expression) = copy(expression = f(expression))(position)
 }
 
-case class DescSortItem(expression: Expression)(val position: InputPosition) extends SortItem {
+case class DescSortItem(expression: Expression)(val position: InputPosition)(implicit override val idGen: IdGen) extends SortItem {
   override def mapExpression(f: Expression => Expression) = copy(expression = f(expression))(position)
 }
 

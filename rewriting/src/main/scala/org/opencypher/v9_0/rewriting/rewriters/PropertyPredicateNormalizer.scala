@@ -15,11 +15,11 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{And, Equals, Parameter, Variable, _}
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.{FreshIdNameGenerator, InputPosition}
-import org.opencypher.v9_0.expressions.{And, Equals, Parameter, Variable}
 
-object PropertyPredicateNormalizer extends MatchPredicateNormalizer {
+case class PropertyPredicateNormalizer(attributes: Attributes) extends MatchPredicateNormalizer {
   override val extract: PartialFunction[AnyRef, IndexedSeq[Expression]] = {
     case NodePattern(Some(id), _, Some(props), _) if !isParameter(props) =>
       propertyPredicates(id, props)
@@ -32,8 +32,8 @@ object PropertyPredicateNormalizer extends MatchPredicateNormalizer {
   }
 
   override val replace: PartialFunction[AnyRef, AnyRef] = {
-    case p@NodePattern(Some(_) ,_, Some(props), _) if !isParameter(props)                  => p.copy(properties = None)(p.position)
-    case p@RelationshipPattern(Some(_), _, _, Some(props), _, _, _) if !isParameter(props) => p.copy(properties = None)(p.position)
+    case p@NodePattern(Some(_) ,_, Some(props), _) if !isParameter(props)                  => p.copy(properties = None)(p.position)(SameId(p.id))
+    case p@RelationshipPattern(Some(_), _, _, Some(props), _, _, _) if !isParameter(props) => p.copy(properties = None)(p.position)(SameId(p.id))
   }
 
   private def isParameter(expr: Expression) = expr match {
@@ -45,25 +45,27 @@ object PropertyPredicateNormalizer extends MatchPredicateNormalizer {
     case mapProps: MapExpression =>
       mapProps.items.map {
         // MATCH (a {a: 1, b: 2}) => MATCH (a) WHERE a.a = 1 AND a.b = 2
-        case (propId, expression) => Equals(Property(id.copyId, propId)(mapProps.position), expression)(mapProps.position)
+        case (propId, expression) =>
+          val prop = Property(id.copyId, propId)(mapProps.position)(attributes.copy(mapProps.id))
+          Equals(prop, expression)(mapProps.position)(attributes.copy(mapProps.id))
       }.toIndexedSeq
     case expr: Expression =>
-      Vector(Equals(id.copyId, expr)(expr.position))
+      Vector(Equals(id.copyId, expr)(expr.position)(attributes.copy(expr.id)))
     case _ =>
       Vector.empty
   }
 
-  private def varLengthPropertyPredicates(id: LogicalVariable, props: Expression, patternPosition: InputPosition): Expression = {
+  private def varLengthPropertyPredicates(variable: LogicalVariable, props: Expression, patternPosition: InputPosition): Expression = {
     val idName = FreshIdNameGenerator.name(patternPosition)
-    val newId = Variable(idName)(id.position)
-    val expressions = propertyPredicates(newId, props)
+    val newVariable = Variable(idName)(variable.position)(attributes.copy(variable.id))
+    val expressions = propertyPredicates(newVariable, props)
     val conjunction = conjunct(expressions)
-    AllIterablePredicate(newId, id.copyId, Some(conjunction))(props.position)
+    AllIterablePredicate(newVariable, variable.copyId, Some(conjunction))(props.position)(attributes.copy(props.id))
   }
 
   private def conjunct(exprs: Seq[Expression]): Expression = exprs match {
     case Nil           => throw new IllegalArgumentException("There should be at least one predicate to be rewritten")
     case expr +: Nil   => expr
-    case expr +: tail  => And(expr, conjunct(tail))(expr.position)
+    case expr +: tail  => And(expr, conjunct(tail))(expr.position)(attributes.copy(expr.id))
   }
 }

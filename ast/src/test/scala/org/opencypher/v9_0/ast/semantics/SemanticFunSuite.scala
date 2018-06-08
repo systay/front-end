@@ -15,10 +15,10 @@
  */
 package org.opencypher.v9_0.ast.semantics
 
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{PropertyKeyName, Variable, _}
 import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions.{PropertyKeyName, Variable}
 
 class SemanticFunSuite extends CypherFunSuite with SemanticAnalysisTooling {
 
@@ -41,6 +41,8 @@ class SemanticFunSuite extends CypherFunSuite with SemanticAnalysisTooling {
   }
 
   val pos = DummyPosition(0)
+  private implicit val idGen: IdGen = new SequentialIdGen()
+
 
   def literal(x:String) = StringLiteral(x)(pos)
   def literal(x:Double) = DecimalDoubleLiteral(x.toString)(pos)

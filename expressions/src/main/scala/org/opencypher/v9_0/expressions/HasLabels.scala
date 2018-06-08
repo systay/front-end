@@ -16,8 +16,9 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 
-case class HasLabels(expression: Expression, labels: Seq[LabelName])(val position: InputPosition) extends Expression {
+case class HasLabels(expression: Expression, labels: Seq[LabelName])(val position: InputPosition)(implicit override val idGen: IdGen) extends Expression {
 
   override def asCanonicalStringVal = s"${expression.asCanonicalStringVal}${labels.map(_.asCanonicalStringVal).mkString(":", ":", "")}"
 }

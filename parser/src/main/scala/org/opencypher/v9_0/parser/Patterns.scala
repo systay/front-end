@@ -45,7 +45,7 @@ trait Patterns extends Parser
 
   private def AnonymousPatternPart: Rule1[org.opencypher.v9_0.expressions.AnonymousPatternPart] = rule (
       ShortestPathPattern
-    | PatternElement ~~> ast.EveryPath
+    | PatternElement ~~> (ast.EveryPath(_))
   )
 
   def ShortestPathPattern: Rule1[org.opencypher.v9_0.expressions.ShortestPaths] = rule (

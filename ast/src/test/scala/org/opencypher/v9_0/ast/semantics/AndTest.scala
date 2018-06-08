@@ -15,12 +15,11 @@
  */
 package org.opencypher.v9_0.ast.semantics
 
+import org.opencypher.v9_0.expressions
 import org.opencypher.v9_0.util.DummyPosition
 import org.opencypher.v9_0.util.symbols._
-import org.opencypher.v9_0.expressions
-import org.opencypher.v9_0.expressions.And
 
-class AndTest extends InfixExpressionTestBase(expressions.And(_, _)(DummyPosition(0))) {
+class AndTest extends InfixExpressionTestBase(expressions.And(_, _)(DummyPosition(0))(_)) {
 
   test("shouldCombineBooleans") {
     testValidTypes(CTBoolean, CTBoolean)(CTBoolean)

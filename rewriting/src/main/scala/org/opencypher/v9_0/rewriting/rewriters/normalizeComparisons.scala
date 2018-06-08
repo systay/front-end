@@ -16,31 +16,32 @@
 package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.{Rewriter, topDown}
-import org.opencypher.v9_0.expressions._
 
+case class normalizeComparisons(attr: Attributes) extends Rewriter {
 
-case object normalizeComparisons extends Rewriter {
-
-  override def apply(that: AnyRef): AnyRef = instance(that)
+  private val inner: Rewriter = copyVariables(attr)
 
   private val instance: Rewriter = topDown(Rewriter.lift {
-    case c@NotEquals(lhs, rhs) =>
-      NotEquals(lhs.endoRewrite(copyVariables), rhs.endoRewrite(copyVariables))(c.position)
-    case c@Equals(lhs, rhs) =>
-      Equals(lhs.endoRewrite(copyVariables), rhs.endoRewrite(copyVariables))(c.position)
-    case c@LessThan(lhs, rhs) =>
-      LessThan(lhs.endoRewrite(copyVariables), rhs.endoRewrite(copyVariables))(c.position)
-    case c@LessThanOrEqual(lhs, rhs) =>
-      LessThanOrEqual(lhs.endoRewrite(copyVariables), rhs.endoRewrite(copyVariables))(c.position)
-    case c@GreaterThan(lhs, rhs) =>
-      GreaterThan(lhs.endoRewrite(copyVariables), rhs.endoRewrite(copyVariables))(c.position)
-    case c@GreaterThanOrEqual(lhs, rhs) =>
-      GreaterThanOrEqual(lhs.endoRewrite(copyVariables), rhs.endoRewrite(copyVariables))(c.position)
-    case c@InvalidNotEquals(lhs, rhs) =>
-      InvalidNotEquals(lhs.endoRewrite(copyVariables), rhs.endoRewrite(copyVariables))(c.position)
-    case c@HasLabels(expr, labels) if labels.size > 1 =>
-      val hasLabels = labels.map(l => HasLabels(expr.endoRewrite(copyVariables), Seq(l))(c.position))
-      Ands(hasLabels.toSet)(c.position)
+    case c: NotEquals =>
+      NotEquals(c.lhs.endoRewrite(inner), c.rhs.endoRewrite(inner))(c.position)(SameId(c.id))
+    case c: Equals =>
+      Equals(c.lhs.endoRewrite(inner), c.rhs.endoRewrite(inner))(c.position)(SameId(c.id))
+    case c: LessThan =>
+      LessThan(c.lhs.endoRewrite(inner), c.rhs.endoRewrite(inner))(c.position)(SameId(c.id))
+    case c: LessThanOrEqual =>
+      LessThanOrEqual(c.lhs.endoRewrite(inner), c.rhs.endoRewrite(inner))(c.position)(SameId(c.id))
+    case c: GreaterThan =>
+      GreaterThan(c.lhs.endoRewrite(inner), c.rhs.endoRewrite(inner))(c.position)(SameId(c.id))
+    case c: GreaterThanOrEqual =>
+      GreaterThanOrEqual(c.lhs.endoRewrite(inner), c.rhs.endoRewrite(inner))(c.position)(SameId(c.id))
+    case c: InvalidNotEquals =>
+      InvalidNotEquals(c.lhs.endoRewrite(inner), c.rhs.endoRewrite(inner))(c.position)(SameId(c.id))
+    case c: HasLabels if c.labels.size > 1 =>
+      val hasLabels = c.labels.map(l => HasLabels(c.expression.endoRewrite(inner), Seq(l))(c.position)(attr.copy(c.id)))
+      Ands(hasLabels.toSet)(c.position)(attr.copy(c.id))
   })
+
+  override def apply(that: AnyRef): AnyRef = instance(that)
 }

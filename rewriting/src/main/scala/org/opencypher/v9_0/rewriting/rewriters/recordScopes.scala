@@ -15,17 +15,19 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.expressions.{MapProjection, PatternComprehension}
-import org.opencypher.v9_0.util.{Rewriter, topDown}
 import org.opencypher.v9_0.ast.semantics.SemanticState
+import org.opencypher.v9_0.expressions.{MapProjection, PatternComprehension}
+import org.opencypher.v9_0.util.attribution.Attributes
+import org.opencypher.v9_0.util.{Rewriter, topDown}
 
-case class recordScopes(semanticState: SemanticState) extends Rewriter {
+case class recordScopes(semanticState: SemanticState, attributes: Attributes) extends Rewriter {
 
   def apply(that: AnyRef): AnyRef = instance.apply(that)
 
   private val instance: Rewriter = topDown(Rewriter.lift {
     case x: PatternComprehension =>
-      x.withOuterScope(semanticState.recordedScopes(x).symbolDefinitions.map(_.asVariable))
+      // TODO This needs to get scope information from an Attribute later on
+      x.withOuterScope(semanticState.recordedScopes(x).symbolDefinitions.map(_.asVariable(attributes.idGen)))
     case x: MapProjection =>
       x.withDefinitionPos(semanticState.recordedScopes(x).symbolTable(x.name.name).definition.position)
   })

@@ -15,44 +15,44 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.ast.{Clause, Match, Merge}
-import org.opencypher.v9_0.expressions.Expression
-import org.opencypher.v9_0.util._
-import org.opencypher.v9_0.ast.Where
+import org.opencypher.v9_0.ast.{Clause, Match, Merge, Where}
 import org.opencypher.v9_0.expressions
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{Expression, _}
+import org.opencypher.v9_0.util._
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 
-case object addUniquenessPredicates extends Rewriter {
+case class addUniquenessPredicates(attributes: Attributes) extends Rewriter {
 
   def apply(that: AnyRef): AnyRef = instance(that)
 
   private val rewriter = Rewriter.lift {
-    case m@Match(_, pattern: Pattern, _, where: Option[Where]) =>
-      val uniqueRels: Seq[UniqueRel] = collectUniqueRels(pattern)
+    case m: Match =>
+      val uniqueRels: Seq[UniqueRel] = collectUniqueRels(m.pattern)
       if (uniqueRels.size < 2) {
         m
       } else {
-        val newWhere = addPredicate(m, uniqueRels, where)
-        m.copy(where = newWhere)(m.position)
+        val newWhere = addPredicate(m, uniqueRels, m.where)
+        m.copy(where = newWhere)(m.position)(SameId(m.id))
       }
-    case m@Merge(pattern: Pattern, _, where: Option[Where]) =>
-      val uniqueRels: Seq[UniqueRel] = collectUniqueRels(pattern)
+    case m: Merge =>
+      val uniqueRels: Seq[UniqueRel] = collectUniqueRels(m.pattern)
       if (uniqueRels.size < 2) {
         m
       } else {
-        val newWhere = addPredicate(m, uniqueRels, where)
-        m.copy(where = newWhere)(m.position)
+        val newWhere = addPredicate(m, uniqueRels, m.where)
+        m.copy(where = newWhere)(m.position)(SameId(m.id))
       }
   }
 
   private def addPredicate(clause: Clause, uniqueRels:  Seq[UniqueRel], where: Option[Where]): Option[Where] = {
-    val maybePredicate: Option[Expression] = createPredicateFor(uniqueRels, clause.position)
+    val maybePredicate: Option[Expression] = createPredicateFor(uniqueRels, clause)
     val newWhere: Option[Where] = (where, maybePredicate) match {
       case (Some(oldWhere), Some(newPredicate)) =>
-        Some(oldWhere.copy(expression = And(oldWhere.expression, newPredicate)(clause.position))(clause.position))
+        val and = And(oldWhere.expression, newPredicate)(clause.position)(attributes.copy(clause.id))
+        Some(oldWhere.copy(expression = and)(clause.position)(attributes.copy(clause.id)))
 
       case (None, Some(newPredicate)) =>
-        Some(Where(expression = newPredicate)(clause.position))
+        Some(Where(expression = newPredicate)(clause.position)(attributes.copy(clause.id)))
 
       case (oldWhere, None) => oldWhere
     }
@@ -73,29 +73,30 @@ case object addUniquenessPredicates extends Rewriter {
         }
     }
 
-  private def createPredicateFor(uniqueRels: Seq[UniqueRel], pos: InputPosition): Option[Expression] = {
-    createPredicatesFor(uniqueRels, pos).reduceOption(expressions.And(_, _)(pos))
+  private def createPredicateFor(uniqueRels: Seq[UniqueRel], clause: Clause): Option[Expression] = {
+    createPredicatesFor(uniqueRels, clause).reduceOption(expressions.And(_, _)(clause.position)(attributes.copy(clause.id)))
   }
 
-  def createPredicatesFor(uniqueRels: Seq[UniqueRel], pos: InputPosition): Seq[Expression] =
+  def createPredicatesFor(uniqueRels: Seq[UniqueRel], clause: Clause): Seq[Expression] =
     for {
       x <- uniqueRels
       y <- uniqueRels if x.name < y.name && !x.isAlwaysDifferentFrom(y)
     } yield {
-      val equals = Equals(x.variable.copyId, y.variable.copyId)(pos)
+      val equals = Equals(x.variable.copyId, y.variable.copyId)(clause.position)(attributes.copy(clause.id))
 
       (x.singleLength, y.singleLength) match {
         case (true, true) =>
-          Not(equals)(pos)
+          Not(equals)(clause.position)(attributes.copy(clause.id))
 
         case (true, false) =>
-          NoneIterablePredicate(y.variable.copyId, y.variable.copyId, Some(equals))(pos)
+          NoneIterablePredicate(y.variable.copyId, y.variable.copyId, Some(equals))(clause.position)(attributes.copy(clause.id))
 
         case (false, true) =>
-          NoneIterablePredicate(x.variable.copyId, x.variable.copyId, Some(equals))(pos)
+          NoneIterablePredicate(x.variable.copyId, x.variable.copyId, Some(equals))(clause.position)(attributes.copy(clause.id))
 
         case (false, false) =>
-          NoneIterablePredicate(x.variable.copyId, x.variable.copyId, Some(AnyIterablePredicate(y.variable.copyId, y.variable.copyId, Some(equals))(pos)))(pos)
+          val anyIterablePredicate = AnyIterablePredicate(y.variable.copyId, y.variable.copyId, Some(equals))(clause.position)(attributes.copy(clause.id))
+          NoneIterablePredicate(x.variable.copyId, x.variable.copyId, Some(anyIterablePredicate))(clause.position)(attributes.copy(clause.id))
       }
     }
 

@@ -15,13 +15,15 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.ast.semantics.SemanticState
+import org.opencypher.v9_0.expressions.{EveryPath, NodePattern, Pattern, _}
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.util.{DummyPosition, InputPosition}
-import org.opencypher.v9_0.ast.semantics.SemanticState
-import org.opencypher.v9_0.expressions.{EveryPath, NodePattern, Pattern}
 
 class PeriodicCommitHintTest extends CypherFunSuite with Positional {
+  private implicit val idGen = new SequentialIdGen()
+
   test("negative values should fail") {
     // Given
     val sizePosition: InputPosition = pos

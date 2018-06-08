@@ -17,16 +17,17 @@ package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.ast.Match
 import org.opencypher.v9_0.expressions.Expression
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 
-case object nameMatchPatternElements extends Rewriter {
+case class nameMatchPatternElements(attributes: Attributes) extends Rewriter {
 
   def apply(that: AnyRef): AnyRef = instance(that)
 
   private val rewriter = Rewriter.lift {
     case m: Match =>
-      val rewrittenPattern = m.pattern.endoRewrite(nameAllPatternElements.namingRewriter)
-      m.copy(pattern = rewrittenPattern)(m.position)
+      val rewrittenPattern = m.pattern.endoRewrite(nameAllPatternElements(attributes))
+      m.copy(pattern = rewrittenPattern)(m.position)(SameId(m.id))
   }
 
   private val instance = bottomUp(rewriter, _.isInstanceOf[Expression])

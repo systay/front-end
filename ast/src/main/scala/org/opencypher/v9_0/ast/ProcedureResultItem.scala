@@ -15,22 +15,21 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.ast.semantics.SemanticCheck
-import org.opencypher.v9_0.expressions.{LogicalVariable, Variable}
+import org.opencypher.v9_0.ast.semantics.{SemanticAnalysisTooling, SemanticCheck}
+import org.opencypher.v9_0.expressions.{LogicalVariable, ProcedureOutput, Variable}
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.{ASTNode, InputPosition}
-import org.opencypher.v9_0.ast.semantics.SemanticAnalysisTooling
-import org.opencypher.v9_0.expressions.{ProcedureOutput, Variable}
 
 object ProcedureResultItem {
-  def apply(output: ProcedureOutput, variable: Variable)(position: InputPosition): ProcedureResultItem =
+  def apply(output: ProcedureOutput, variable: Variable)(position: InputPosition)(implicit idGen: IdGen): ProcedureResultItem =
     ProcedureResultItem(Some(output), variable)(position)
 
-  def apply(variable: Variable)(position: InputPosition): ProcedureResultItem =
+  def apply(variable: Variable)(position: InputPosition)(implicit idGen: IdGen): ProcedureResultItem =
     ProcedureResultItem(None, variable)(position)
 }
 
-case class ProcedureResultItem(output: Option[ProcedureOutput], variable: LogicalVariable)(val position: InputPosition)
+case class ProcedureResultItem(output: Option[ProcedureOutput], variable: LogicalVariable)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends ASTNode with SemanticAnalysisTooling {
 
   val outputName: String = output.map(_.name).getOrElse(variable.name)

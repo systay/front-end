@@ -19,7 +19,7 @@ import org.opencypher.v9_0.expressions.Divide
 import org.opencypher.v9_0.util.DummyPosition
 import org.opencypher.v9_0.util.symbols._
 
-class DivideTest extends InfixExpressionTestBase(Divide(_, _)(DummyPosition(0))) {
+class DivideTest extends InfixExpressionTestBase(Divide(_, _)(DummyPosition(0))(_)) {
 
   // Infix specializations:
   // 1 / 1 => 1

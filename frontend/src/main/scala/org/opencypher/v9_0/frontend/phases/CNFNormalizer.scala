@@ -15,21 +15,22 @@
  */
 package org.opencypher.v9_0.frontend.phases
 
-import org.opencypher.v9_0.rewriting.rewriters._
-import org.opencypher.v9_0.util.{Rewriter, inSequence}
 import org.opencypher.v9_0.rewriting.AstRewritingMonitor
+import org.opencypher.v9_0.rewriting.rewriters._
+import org.opencypher.v9_0.util.attribution.Attributes
+import org.opencypher.v9_0.util.{Rewriter, inSequence}
 
-case object CNFNormalizer extends StatementRewriter {
+case class CNFNormalizer(attributes: Attributes) extends StatementRewriter {
 
   override def description: String = "normalize boolean predicates into conjunctive normal form"
 
   override def instance(context: BaseContext): Rewriter = {
     implicit val monitor = context.monitors.newMonitor[AstRewritingMonitor]()
     inSequence(
-      deMorganRewriter(),
-      distributeLawsRewriter(),
+      deMorganRewriter(attributes),
+      distributeLawsRewriter(attributes),
       flattenBooleanOperators,
-      simplifyPredicates,
+      simplifyPredicates(attributes),
       // Redone here since CNF normalization might introduce negated inequalities (which this removes)
       normalizeSargablePredicates
     )

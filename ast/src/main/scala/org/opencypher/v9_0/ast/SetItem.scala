@@ -15,16 +15,15 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.ast.semantics._
-import org.opencypher.v9_0.expressions.{Expression, LogicalProperty, Variable}
+import org.opencypher.v9_0.ast.semantics.{SemanticAnalysisTooling, SemanticCheckable, SemanticExpressionCheck, _}
+import org.opencypher.v9_0.expressions.{Expression, LabelName, LogicalProperty, Variable}
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.{ASTNode, InputPosition}
-import org.opencypher.v9_0.ast.semantics.{SemanticAnalysisTooling, SemanticCheckable, SemanticExpressionCheck}
-import org.opencypher.v9_0.expressions.{LabelName, Variable}
 
 sealed trait SetItem extends ASTNode with SemanticCheckable
 
-case class SetLabelItem(variable: Variable, labels: Seq[LabelName])(val position: InputPosition) extends SetItem {
+case class SetLabelItem(variable: Variable, labels: Seq[LabelName])(val position: InputPosition)(implicit override val idGen: IdGen) extends SetItem {
   def semanticCheck =
     SemanticExpressionCheck.simple(variable) chain
     SemanticExpressionCheck.expectType(CTNode.covariant, variable)
@@ -32,7 +31,7 @@ case class SetLabelItem(variable: Variable, labels: Seq[LabelName])(val position
 
 sealed trait SetProperty extends SetItem with SemanticAnalysisTooling
 
-case class SetPropertyItem(property: LogicalProperty, expression: Expression)(val position: InputPosition) extends SetProperty {
+case class SetPropertyItem(property: LogicalProperty, expression: Expression)(val position: InputPosition)(implicit override val idGen: IdGen) extends SetProperty {
   def semanticCheck =
     SemanticExpressionCheck.simple(property) chain
       SemanticExpressionCheck.simple(expression) chain
@@ -40,7 +39,7 @@ case class SetPropertyItem(property: LogicalProperty, expression: Expression)(va
 }
 
 case class SetExactPropertiesFromMapItem(variable: Variable, expression: Expression)
-                                        (val position: InputPosition) extends SetProperty {
+                                        (val position: InputPosition)(implicit override val idGen: IdGen) extends SetProperty {
   def semanticCheck =
     SemanticExpressionCheck.simple(variable) chain
       expectType(CTNode.covariant | CTRelationship.covariant, variable) chain
@@ -49,7 +48,7 @@ case class SetExactPropertiesFromMapItem(variable: Variable, expression: Express
 }
 
 case class SetIncludingPropertiesFromMapItem(variable: Variable, expression: Expression)
-                                        (val position: InputPosition) extends SetProperty {
+                                        (val position: InputPosition)(implicit override val idGen: IdGen) extends SetProperty {
   def semanticCheck =
     SemanticExpressionCheck.simple(variable) chain
       expectType(CTNode.covariant | CTRelationship.covariant, variable) chain

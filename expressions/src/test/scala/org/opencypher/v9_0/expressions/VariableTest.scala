@@ -16,29 +16,13 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class VariableTest extends CypherFunSuite {
   test("variable names are handled by the trait") {
     val _name = "testVariable"
-    val variable = new LogicalVariable {
-      override def name: String = _name
-
-      override def copyId: LogicalVariable = ???
-
-      override def renameId(newName: String): LogicalVariable = ???
-
-      override def bumpId: LogicalVariable = ???
-
-      override def position: InputPosition = ???
-
-      override def productElement(n: Int): Any = ???
-
-      override def productArity: Int = ???
-
-      override def canEqual(that: Any): Boolean = ???
-    }
-
+    val variable = new Variable(_name)(InputPosition.NONE)(new SequentialIdGen())
     variable.asCanonicalStringVal should equal(_name)
   }
 }

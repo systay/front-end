@@ -16,12 +16,13 @@
 package org.opencypher.v9_0.ast.semantics
 
 import org.opencypher.v9_0.expressions.DummyExpression
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class SemanticAnalysisToolingTest extends CypherFunSuite {
 
-  val expression = DummyExpression(CTAny)
+  val expression = DummyExpression(CTAny)(new SequentialIdGen())
 
   val toTest = new SemanticAnalysisTooling {}
 

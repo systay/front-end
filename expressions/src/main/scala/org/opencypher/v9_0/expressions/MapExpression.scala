@@ -16,8 +16,9 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 
-case class MapExpression(items: Seq[(PropertyKeyName, Expression)])(val position: InputPosition) extends Expression {
+case class MapExpression(items: Seq[(PropertyKeyName, Expression)])(val position: InputPosition)(implicit override val idGen: IdGen) extends Expression {
 
   override def asCanonicalStringVal: String = items.map {
     case (key, value) => s"${key.asCanonicalStringVal}: ${value.asCanonicalStringVal}"

@@ -19,7 +19,6 @@ import org.opencypher.v9_0.expressions.Expression.SemanticContext
 import org.opencypher.v9_0.expressions.ReduceExpression.AccumulatorExpressionTypeMismatchMessageGenerator
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.util.symbols._
-import org.opencypher.v9_0.expressions._
 
 import scala.util.Try
 
@@ -360,7 +359,7 @@ object SemanticExpressionCheck extends SemanticAnalysisTooling {
         check(ctx, x.exp)
 
       case x:VariableSelector =>
-        check(ctx, x.id)
+        check(ctx, x.variable)
 
       case x:PropertySelector =>
         SemanticCheckResult.success

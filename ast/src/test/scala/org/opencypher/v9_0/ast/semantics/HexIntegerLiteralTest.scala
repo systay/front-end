@@ -18,8 +18,10 @@ package org.opencypher.v9_0.ast.semantics
 import org.opencypher.v9_0.expressions.Expression.SemanticContext
 import org.opencypher.v9_0.expressions.SignedHexIntegerLiteral
 import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 
 class HexIntegerLiteralTest extends SemanticFunSuite {
+  private implicit val idGen = new SequentialIdGen()
   test("correctly parses hexadecimal numbers") {
     assert(SignedHexIntegerLiteral("0x22")(DummyPosition(0)).value === 0x22)
     assert(SignedHexIntegerLiteral("0x0")(DummyPosition(0)).value === 0)

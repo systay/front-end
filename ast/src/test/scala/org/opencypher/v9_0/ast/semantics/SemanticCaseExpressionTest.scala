@@ -17,9 +17,11 @@ package org.opencypher.v9_0.ast.semantics
 
 import org.opencypher.v9_0.expressions.{CaseExpression, DummyExpression}
 import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.symbols._
 
 class SemanticCaseExpressionTest extends SemanticFunSuite {
+  private implicit val idGen: IdGen = new SequentialIdGen()
 
   test("Simple: Should combine types of alternatives") {
     val caseExpression = CaseExpression(

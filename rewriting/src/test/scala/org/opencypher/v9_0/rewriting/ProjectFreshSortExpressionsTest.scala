@@ -18,11 +18,12 @@ package org.opencypher.v9_0.rewriting
 import org.opencypher.v9_0.ast.AstConstructionTestSupport
 import org.opencypher.v9_0.ast.semantics.{SemanticState, SyntaxExceptionCreator}
 import org.opencypher.v9_0.rewriting.rewriters.{expandStar, normalizeReturnClauses, normalizeWithClauses, projectFreshSortExpressions}
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.util.{Rewriter, inSequence}
 
 class ProjectFreshSortExpressionsTest extends CypherFunSuite with RewriteTest with AstConstructionTestSupport {
-  val rewriterUnderTest: Rewriter = projectFreshSortExpressions
+  val rewriterUnderTest: Rewriter = projectFreshSortExpressions(Attributes(idGen))
 
   test("don't adjust WITH without ORDER BY or WHERE") {
     assertRewrite(
@@ -197,8 +198,9 @@ class ProjectFreshSortExpressionsTest extends CypherFunSuite with RewriteTest wi
   private def ast(queryText: String) = {
     val parsed = parseForRewriting(queryText)
     val mkException = new SyntaxExceptionCreator(queryText, Some(pos))
-    val normalized = parsed.endoRewrite(inSequence(normalizeReturnClauses(mkException), normalizeWithClauses(mkException)))
+    val attributes = Attributes(idGen)
+    val normalized = parsed.endoRewrite(inSequence(normalizeReturnClauses(mkException, attributes), normalizeWithClauses(mkException, attributes)))
     val checkResult = normalized.semanticCheck(SemanticState.clean)
-    normalized.endoRewrite(inSequence(expandStar(checkResult.state)))
+    normalized.endoRewrite(inSequence(expandStar(checkResult.state, attributes)))
   }
 }

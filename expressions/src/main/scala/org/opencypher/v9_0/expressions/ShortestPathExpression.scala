@@ -15,6 +15,8 @@
  */
 package org.opencypher.v9_0.expressions
 
-case class ShortestPathExpression(pattern: ShortestPaths) extends Expression {
+import org.opencypher.v9_0.util.attribution.IdGen
+
+case class ShortestPathExpression(pattern: ShortestPaths)(implicit override val idGen: IdGen) extends Expression {
   def position = pattern.position
 }

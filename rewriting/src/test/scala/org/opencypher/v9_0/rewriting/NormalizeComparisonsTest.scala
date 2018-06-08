@@ -18,8 +18,8 @@ package org.opencypher.v9_0.rewriting
 import org.opencypher.v9_0.ast.AstConstructionTestSupport
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.rewriting.rewriters.normalizeComparisons
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions._
 
 class NormalizeComparisonsTest extends CypherFunSuite with AstConstructionTestSupport {
 
@@ -36,7 +36,7 @@ class NormalizeComparisonsTest extends CypherFunSuite with AstConstructionTestSu
 
   comparisons.foreach { operator =>
     test(operator.toString) {
-      val rewritten = operator.endoRewrite(normalizeComparisons)
+      val rewritten = operator.endoRewrite(normalizeComparisons(Attributes(idGen)))
 
       rewritten.lhs shouldNot be theSameInstanceAs rewritten.rhs
     }
@@ -45,7 +45,7 @@ class NormalizeComparisonsTest extends CypherFunSuite with AstConstructionTestSu
   test("extract multiple hasLabels") {
     val original = HasLabels(varFor("a"), Seq(lblName("X"), lblName("Y")))(pos)
 
-    original.endoRewrite(normalizeComparisons) should equal(
+    original.endoRewrite(normalizeComparisons(Attributes(idGen))) should equal(
       Ands(Set(
         HasLabels(varFor("a"), Seq(lblName("X")))(pos),
         HasLabels(varFor("a"), Seq(lblName("Y")))(pos)))(pos))
@@ -54,6 +54,6 @@ class NormalizeComparisonsTest extends CypherFunSuite with AstConstructionTestSu
   test("does not extract single hasLabels") {
     val original = HasLabels(varFor("a"), Seq(lblName("Y")))(pos)
 
-    original.endoRewrite(normalizeComparisons) should equal(original)
+    original.endoRewrite(normalizeComparisons(Attributes(idGen))) should equal(original)
   }
 }

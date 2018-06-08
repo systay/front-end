@@ -20,6 +20,7 @@ import org.opencypher.v9_0.rewriting.rewriters.mergeInPredicates
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.frontend.phases.CNFNormalizer
 import org.opencypher.v9_0.rewriting.AstRewritingTestSupport
+import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
 
 class mergeInPredicatesTest extends CypherFunSuite with AstRewritingTestSupport {
 
@@ -85,8 +86,9 @@ class mergeInPredicatesTest extends CypherFunSuite with AstRewritingTestSupport 
   private def shouldRewrite(from: String, to: String) {
     val original = parser.parse(from).asInstanceOf[Query]
     val expected = parser.parse(to).asInstanceOf[Query]
-    val common = CNFNormalizer.instance(TestContext())
-    val result = mergeInPredicates(original)
+    val attributes = Attributes(new SequentialIdGen())
+    val common = CNFNormalizer(attributes).instance(TestContext())
+    val result = mergeInPredicates(attributes)(original)
 
     common(result) should equal(common(expected))
   }

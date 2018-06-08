@@ -17,20 +17,21 @@ package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.expressions.functions.UnresolvedFunction
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 
 object FunctionInvocation {
-  def apply(name: FunctionName, argument: Expression)(position: InputPosition): FunctionInvocation =
+  def apply(name: FunctionName, argument: Expression)(position: InputPosition)(implicit idGen: IdGen): FunctionInvocation =
     FunctionInvocation(Namespace()(position), name, distinct = false, IndexedSeq(argument))(position)
-  def apply(left: Expression, name: FunctionName, right: Expression): FunctionInvocation =
+  def apply(left: Expression, name: FunctionName, right: Expression)(implicit idGen: IdGen): FunctionInvocation =
     FunctionInvocation(Namespace()(name.position), name, distinct = false, IndexedSeq(left, right))(name.position)
-  def apply(expression: Expression, name: FunctionName): FunctionInvocation =
+  def apply(expression: Expression, name: FunctionName)(implicit idGen: IdGen): FunctionInvocation =
     FunctionInvocation(Namespace()(name.position), name, distinct = false, IndexedSeq(expression))(name.position)
-  def apply(functionName: FunctionName, distinct: Boolean, args: IndexedSeq[Expression])(position: InputPosition): FunctionInvocation =
+  def apply(functionName: FunctionName, distinct: Boolean, args: IndexedSeq[Expression])(position: InputPosition)(implicit idGen: IdGen): FunctionInvocation =
   FunctionInvocation(Namespace()(position), functionName, distinct, args)(position)
 }
 
 case class FunctionInvocation(namespace: Namespace, functionName: FunctionName, distinct: Boolean, args: IndexedSeq[Expression])
-                             (val position: InputPosition) extends Expression {
+                             (val position: InputPosition)(implicit override val idGen: IdGen) extends Expression {
   val name: String = (namespace.parts :+ functionName.name).mkString(".")
   val function: functions.Function = functions.Function.lookup.getOrElse(name.toLowerCase, UnresolvedFunction)
 
@@ -42,7 +43,7 @@ case class FunctionInvocation(namespace: Namespace, functionName: FunctionName, 
   override def asCanonicalStringVal = s"$name(${args.map(_.asCanonicalStringVal).mkString(",")})"
 }
 
-case class FunctionName(name: String)(val position: InputPosition) extends SymbolicName {
+case class FunctionName(name: String)(val position: InputPosition)(implicit override val idGen: IdGen) extends SymbolicName {
   override def equals(x: Any): Boolean = x match {
     case FunctionName(other) => other.toLowerCase == name.toLowerCase
     case _ => false

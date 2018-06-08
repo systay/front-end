@@ -15,28 +15,26 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{PathExpression, PatternElement, _}
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
-import org.opencypher.v9_0.expressions.{PathExpression, PatternElement}
 
-case object inlineNamedPathsInPatternComprehensions extends Rewriter {
+case class inlineNamedPathsInPatternComprehensions(attributes: Attributes) extends Rewriter {
 
   private val instance = bottomUp(Rewriter.lift {
     case expr @ PatternComprehension(Some(path), pattern, predicate, projection, _) =>
       val patternElement = pattern.element
       expr.copy(
         namedPath = None,
-        predicate = predicate.map(_.inline(path, patternElement)),
-        projection = projection.inline(path, patternElement)
-      )(expr.position)
+        predicate = predicate.map(inline(_, path, patternElement)),
+        projection = inline(projection, path, patternElement)
+      )(expr.position)(SameId(expr.id))
   })
 
-  private implicit final class InliningExpression(val expr: Expression) extends AnyVal {
-    def inline(path: LogicalVariable, patternElement: PatternElement) =
-      expr.copyAndReplace(path) by {
-        PathExpression(projectNamedPaths.patternPartPathExpression(patternElement))(expr.position)
-      }
-  }
+  private def inline(expr: Expression, path: LogicalVariable, patternElement: PatternElement): Expression =
+    expr.copyAndReplace(path) by {
+      PathExpression(projectNamedPaths(attributes).patternPartPathExpression(patternElement))(expr.position)(attributes.copy(expr.id))
+    }
 
   override def apply(v: AnyRef): AnyRef = instance(v)
 }

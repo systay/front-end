@@ -23,6 +23,7 @@ import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.util.{CypherException, InputPosition, Rewriter}
 import org.opencypher.v9_0.frontend.phases.{CNFNormalizer, CompilationPhaseTracer, InternalNotificationLogger, Monitors}
 import org.opencypher.v9_0.rewriting.{AstRewritingMonitor, PredicateTestSupport}
+import org.opencypher.v9_0.util.attribution.{Attributes, IdGen, SequentialIdGen}
 import org.scalatest.mock.MockitoSugar
 
 class CNFNormalizerTest extends CypherFunSuite with PredicateTestSupport {
@@ -117,7 +118,7 @@ class CNFNormalizerTest extends CypherFunSuite with PredicateTestSupport {
     val monitors = mock[Monitors]
     astRewritingMonitor = mock[AstRewritingMonitor]
     when(monitors.newMonitor[AstRewritingMonitor]()).thenReturn(astRewritingMonitor)
-    rewriter = CNFNormalizer.instance(new TestContext(monitors))
+    rewriter = CNFNormalizer(Attributes(new SequentialIdGen())).instance(new TestContext(monitors))
   }
 }
 
@@ -135,4 +136,6 @@ class TestContext(override val monitors: Monitors) extends BaseContext {
   override def exceptionCreator: (String, InputPosition) => CypherException = ???
 
   override def errorHandler: Seq[SemanticErrorDef] => Unit = ???
+
+  override val astIdGen: IdGen = new SequentialIdGen()
 }

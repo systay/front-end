@@ -15,16 +15,17 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{PathExpression, Variable, _}
 import org.opencypher.v9_0.rewriting.rewriters.InliningContext.INLINING_THRESHOLD
 import org.opencypher.v9_0.util._
-import org.opencypher.v9_0.expressions.{PathExpression, Variable}
+import org.opencypher.v9_0.util.attribution.Attributes
 
 case class InliningContext(projections: Map[LogicalVariable, Expression] = Map.empty,
                            seenVariables: Set[LogicalVariable] = Set.empty,
-                           usageCount: Map[LogicalVariable, Int] = Map.empty) {
+                           usageCount: Map[LogicalVariable, Int] = Map.empty,
+                           attributes: Attributes) {
 
-  def trackUsageOfVariable(id: Variable) =
+  def trackUsageOfVariable(id: Variable): InliningContext =
     copy(usageCount = usageCount + (id -> (usageCount.withDefaultValue(0)(id) + 1)))
 
   def enterQueryPart(newProjections: Map[LogicalVariable, Expression]): InliningContext = {
@@ -50,27 +51,27 @@ case class InliningContext(projections: Map[LogicalVariable, Expression] = Map.e
 
   def variableRewriter: Rewriter = bottomUp(Rewriter.lift {
     case variable: Variable if okToRewrite(variable) =>
-      projections.get(variable).map(_.endoRewrite(copyVariables)).getOrElse(variable.copyId)
+      projections.get(variable).map(_.endoRewrite(copyVariables(attributes))).getOrElse(variable.copyId)
   })
 
-  def okToRewrite(i: LogicalVariable) =
+  def okToRewrite(i: LogicalVariable): Boolean =
     projections.contains(i) &&
       usageCount.withDefaultValue(0)(i) < INLINING_THRESHOLD
 
   def patternRewriter: Rewriter = bottomUp(Rewriter.lift {
     case node @ NodePattern(Some(ident), _, _, _) if okToRewrite(ident) =>
       alias(ident) match {
-        case alias @ Some(_) => node.copy(variable = alias)(node.position)
-        case _               => node
+        case alias @ Some(_) => node.copy(variable = alias)(node.position)(attributes.copy(node.id))
+        case _               => node.selfThis
       }
     case rel @ RelationshipPattern(Some(ident), _, _, _, _, _, _) if okToRewrite(ident) =>
       alias(ident) match {
-        case alias @ Some(_) => rel.copy(variable = alias)(rel.position)
-        case _               => rel
+        case alias @ Some(_) => rel.copy(variable = alias)(rel.position)(attributes.copy(rel.id))
+        case _               => rel.selfThis
       }
   })
 
-  def isAliasedVarible(variable: LogicalVariable) = alias(variable).nonEmpty
+  def isAliasedVarible(variable: LogicalVariable): Boolean = alias(variable).nonEmpty
 
   def alias(variable: LogicalVariable): Option[LogicalVariable] = projections.get(variable) match {
     case Some(other: Variable) => Some(other.copyId)

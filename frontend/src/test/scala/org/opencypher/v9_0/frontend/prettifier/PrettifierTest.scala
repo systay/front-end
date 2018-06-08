@@ -18,13 +18,14 @@ package org.opencypher.v9_0.frontend.prettifier
 import org.opencypher.v9_0.parser.CypherParser
 import org.opencypher.v9_0.util.test_helpers.{CypherFunSuite, WindowsStringSafe}
 import org.opencypher.v9_0.ast.Statement
+import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
 
 class PrettifierTest extends CypherFunSuite {
   implicit val windowsSafe = WindowsStringSafe
 
   val stringifier: Prettifier = Prettifier(ExpressionStringifier())
 
-  val parser = new CypherParser
+  val parser = new CypherParser(Attributes(new SequentialIdGen()))
   val tests: Seq[(String, String)] =
     Seq[(String, String)](
       "return 42" -> "RETURN 42",

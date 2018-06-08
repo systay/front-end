@@ -15,10 +15,9 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.expressions._
-import org.opencypher.v9_0.util.{InputPosition, InternalException, Rewriter, topDown}
-import org.opencypher.v9_0.ast.semantics.SemanticState
-import org.opencypher.v9_0.expressions.{PropertyKeyName, Variable}
+import org.opencypher.v9_0.expressions.{PropertyKeyName, Variable, _}
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
+import org.opencypher.v9_0.util.{InternalException, Rewriter, topDown}
 
 /*
 Handles rewriting map projection elements to literal entries when possible. If the user
@@ -29,32 +28,34 @@ so the runtime only has two cases to handle - literal entries and the special al
 We can't rewrite all the way to literal maps, since map projections yield a null map when the map_variable is null,
 and the same behaviour can't be mimicked with literal maps.
  */
-case class desugarMapProjection(state: SemanticState) extends Rewriter {
-  def apply(that: AnyRef): AnyRef = topDown(instance).apply(that)
+case class desugarMapProjection(attributes: Attributes) extends Rewriter {
 
   private val instance: Rewriter = Rewriter.lift {
     case e@MapProjection(id, items, definitionPos) =>
 
-      def propertySelect(propertyPosition: InputPosition, name: String): LiteralEntry = {
-        val key = PropertyKeyName(name)(propertyPosition)
+      def propertySelect(variable: Variable, name: String): LiteralEntry = {
+        val key = PropertyKeyName(name)(variable.position)(attributes.copy(variable.id))
         val idPos = definitionPos.getOrElse(throw new InternalException("MapProjection definition pos is not known"))
-        val newIdentifier = Variable(id.name)(idPos)
-        val value = Property(newIdentifier, key)(propertyPosition)
-        LiteralEntry(key, value)(propertyPosition)
+        // TODO broken s**t
+        val newIdentifier = Variable(id.name)(idPos)(attributes.idGen)
+        val value = Property(newIdentifier, key)(variable.position)(attributes.copy(variable.id))
+        LiteralEntry(key, value)(variable.position)(attributes.copy(variable.id))
       }
 
-      def identifierSelect(id: Variable): LiteralEntry =
-        LiteralEntry(PropertyKeyName(id.name)(id.position), id)(id.position)
+      def identifierSelect(variable: Variable): LiteralEntry =
+        LiteralEntry(PropertyKeyName(variable.name)(variable.position)(attributes.copy(variable.id)), variable)(variable.position)(attributes.copy(variable.id))
 
       var includeAllProps = false
 
       val mapExpressionItems = items.flatMap {
         case x: LiteralEntry => Some(x)
         case x: AllPropertiesSelector => includeAllProps = true; None
-        case PropertySelector(property: Variable) => Some(propertySelect(property.position, property.name))
+        case PropertySelector(property: Variable) => Some(propertySelect(property, property.name))
         case VariableSelector(identifier: Variable) => Some(identifierSelect(identifier))
       }
 
-      DesugaredMapProjection(id, mapExpressionItems, includeAllProps)(e.position)
+      DesugaredMapProjection(id, mapExpressionItems, includeAllProps)(e.position)(SameId(e.id))
   }
+
+  override def apply(that: AnyRef): AnyRef = topDown(instance).apply(that)
 }

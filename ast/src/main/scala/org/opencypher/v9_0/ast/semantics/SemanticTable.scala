@@ -16,10 +16,9 @@
 package org.opencypher.v9_0.ast.semantics
 
 import org.opencypher.v9_0.ast.ASTAnnotationMap
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{LabelName, PropertyKeyName, RelTypeName, Variable, _}
 import org.opencypher.v9_0.util._
 import org.opencypher.v9_0.util.symbols._
-import org.opencypher.v9_0.expressions.{LabelName, PropertyKeyName, RelTypeName, Variable}
 
 import scala.collection.mutable
 
@@ -55,7 +54,7 @@ class SemanticTable(
     types.getOrElse(expr, throw new InternalException(s"Did not find any type information for expression $expr")).actual
 
   def containsNode(expr: String): Boolean = types.exists {
-    case (v@Variable(name), _) => name == expr && isNode(v) // NOTE: Profiling showed that checking node type last is better
+    case (v: Variable, _) => v.name == expr && isNode(v) // NOTE: Profiling showed that checking node type last is better
     case _ => false
   }
 

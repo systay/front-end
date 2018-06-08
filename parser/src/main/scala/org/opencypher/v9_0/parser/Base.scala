@@ -16,6 +16,7 @@
 package org.opencypher.v9_0.parser
 
 import org.opencypher.v9_0.expressions.{Namespace => ASTNamespace}
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.{InputPosition, InternalException, SyntaxException}
 import org.parboiled.Context
 import org.parboiled.errors.{InvalidInputError, ParseError}
@@ -23,6 +24,8 @@ import org.parboiled.scala.{Parser, _}
 import org.parboiled.support.IndexRange
 
 trait Base extends Parser {
+
+  implicit val idGen: IdGen
 
   def OpChar = rule("an operator char") { anyOf("|^&<>=?!:+-*/%~") }
   def OpCharTail = rule("an operator char") { anyOf("|^&<>=?!:*/%~") }

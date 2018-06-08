@@ -16,10 +16,10 @@
 package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.ast.AstConstructionTestSupport
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{NodePattern, RelationshipPattern, _}
 import org.opencypher.v9_0.rewriting.rewriters.InliningContext
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions.{NodePattern, RelationshipPattern}
 
 class InliningContextTest extends CypherFunSuite with AstConstructionTestSupport {
 
@@ -35,29 +35,29 @@ class InliningContextTest extends CypherFunSuite with AstConstructionTestSupport
   val mapAtoN = Map[LogicalVariable, Expression](identA -> identN)
 
   test("update projections on enterQueryPart") {
-    val ctx = InliningContext(mapM).enterQueryPart(mapN)
+    val ctx = InliningContext(mapM, attributes = Attributes(idGen)).enterQueryPart(mapN)
 
     ctx.projections should equal(mapM ++ mapN)
   }
 
   test("inline expressions on enterQueryPart") {
-    val ctx = InliningContext(mapN).enterQueryPart(mapAtoN)
+    val ctx = InliningContext(mapN, attributes = Attributes(idGen)).enterQueryPart(mapAtoN)
 
     ctx.projections should equal(mapN ++ mapA)
   }
 
   test("throw assertiona error when new projections use an already seen variable") {
-    intercept[AssertionError](InliningContext().enterQueryPart(mapN).enterQueryPart(mapN))
+    intercept[AssertionError](InliningContext(attributes = Attributes(idGen)).enterQueryPart(mapN).enterQueryPart(mapN))
   }
 
   test("ignore new projections when spoilVariable is called") {
-    val ctx = InliningContext(mapN).spoilVariable(identN)
+    val ctx = InliningContext(mapN, attributes = Attributes(idGen)).spoilVariable(identN)
 
     ctx.projections should equal(Map.empty)
   }
 
   test("should inline aliases into node patterns") {
-    val ctx = InliningContext(mapAtoN)
+    val ctx = InliningContext(mapAtoN, attributes = Attributes(idGen))
 
     val expr: NodePattern = NodePattern(Some(identA), Seq(), None)_
 
@@ -65,7 +65,7 @@ class InliningContextTest extends CypherFunSuite with AstConstructionTestSupport
   }
 
   test("should inline aliases into relationship patterns") {
-    val ctx = InliningContext(mapAtoN)
+    val ctx = InliningContext(mapAtoN, attributes = Attributes(idGen))
 
     val expr: RelationshipPattern = RelationshipPattern(Some(identA), Seq(), None, None, SemanticDirection.OUTGOING)_
 

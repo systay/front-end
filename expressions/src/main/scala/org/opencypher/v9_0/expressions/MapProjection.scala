@@ -16,29 +16,30 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.{IdGen, SameId}
 
 case class MapProjection(
                           name: Variable, // Since this is always rewritten to DesugaredMapProjection this
                                           // (and in the elements below) may not need to be LogicalVariable
                           items: Seq[MapProjectionElement],
                           definitionPos: Option[InputPosition] = None)
-                        (val position: InputPosition)
+                        (val position: InputPosition)(implicit override val idGen: IdGen)
   extends Expression {
 
   def withDefinitionPos(pos:InputPosition): MapProjection =
-    copy(definitionPos = Some(pos))(position)
+    copy(definitionPos = Some(pos))(position)(SameId(id))
 }
 
 case class DesugaredMapProjection(
                                    name: LogicalVariable,
                                    items: Seq[LiteralEntry],
                                    includeAllProps: Boolean
-                                 )(val position: InputPosition) extends Expression
+                                 )(val position: InputPosition)(implicit override val idGen: IdGen) extends Expression
 
 
 sealed trait MapProjectionElement extends Expression
 
-case class LiteralEntry(key: PropertyKeyName, exp: Expression)(val position: InputPosition) extends MapProjectionElement
-case class VariableSelector(id: Variable)(val position: InputPosition) extends MapProjectionElement
-case class PropertySelector(id: Variable)(val position: InputPosition) extends MapProjectionElement
-case class AllPropertiesSelector()(val position: InputPosition) extends MapProjectionElement
+case class LiteralEntry(key: PropertyKeyName, exp: Expression)(val position: InputPosition)(implicit override val idGen: IdGen) extends MapProjectionElement
+case class VariableSelector(variable: Variable)(val position: InputPosition)(implicit override val idGen: IdGen) extends MapProjectionElement
+case class PropertySelector(variable: Variable)(val position: InputPosition)(implicit override val idGen: IdGen) extends MapProjectionElement
+case class AllPropertiesSelector()(val position: InputPosition)(implicit override val idGen: IdGen) extends MapProjectionElement

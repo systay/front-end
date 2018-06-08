@@ -17,7 +17,6 @@ package org.opencypher.v9_0.frontend.prettifier
 
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.util.InternalException
-import org.opencypher.v9_0.expressions._
 
 case class ExpressionStringifier(extender: Expression => String = e => throw new InternalException(s"failed to pretty print $e")) {
   def apply(ast: Expression): String = {
@@ -51,7 +50,7 @@ case class ExpressionStringifier(extender: Expression => String = e => throw new
         val as = args.map(this.apply).mkString(", ")
         s"$ns${functionName.name}($ds$as)"
       case p@Property(m, k) =>
-        s"${parens(p, m)}.${backtick(k.name)}"
+        s"${parens(p.selfThis, m)}.${backtick(k.name)}"
       case MapExpression(items) =>
         val is = items.map({ case (k, e) => s"${backtick(k.name)}: ${this.apply(e)}" }).mkString(", ")
         s"{$is}"
@@ -60,11 +59,11 @@ case class ExpressionStringifier(extender: Expression => String = e => throw new
       case _: CountStar =>
         s"count(*)"
       case e@IsNull(arg) =>
-        s"${parens(e, arg)} IS NULL"
+        s"${parens(e.selfThis, arg)} IS NULL"
       case e@IsNotNull(arg) =>
-        s"${parens(e, arg)} IS NOT NULL"
+        s"${parens(e.selfThis, arg)} IS NOT NULL"
       case e@ContainerIndex(exp, idx) =>
-        s"${parens(e, exp)}[${this.apply(idx)}]"
+        s"${parens(e.selfThis, exp)}[${this.apply(idx)}]"
       case ListSlice(list, start, end) =>
         val l = start.map(this.apply).getOrElse("")
         val r = end.map(this.apply).getOrElse("")
@@ -76,7 +75,7 @@ case class ExpressionStringifier(extender: Expression => String = e => throw new
       case AnyIterablePredicate(scope, expression) =>
         s"any${prettyScope(scope, expression)}"
       case not@Not(arg) =>
-        s"not ${parens(not, arg)}"
+        s"not ${parens(not.selfThis, arg)}"
       case ListComprehension(s, expression) =>
         val v = this.apply(s.variable)
         val p = s.innerPredicate.map(e => " WHERE " + this.apply(e)).getOrElse("")
@@ -95,7 +94,7 @@ case class ExpressionStringifier(extender: Expression => String = e => throw new
         s"[$v${pattern(relChain)}$p | ${this.apply(proj)}]"
       case e@HasLabels(arg, labels) =>
         val l = labels.map(label => backtick(label.name)).mkString(":", ":", "")
-        s"${parens(e, arg)}$l"
+        s"${parens(e.selfThis, arg)}$l"
       case AllIterablePredicate(scope, e) =>
         s"all${prettyScope(scope, e)}"
       case NoneIterablePredicate(scope, e) =>
@@ -116,9 +115,9 @@ case class ExpressionStringifier(extender: Expression => String = e => throw new
         }).mkString(" ", " ", "")
         s"case$e$items${d}end"
       case e@Ands(expressions) =>
-        expressions.map(x => parens(e, x)).mkString(" AND ")
+        expressions.map(x => parens(e.selfThis, x)).mkString(" AND ")
       case e@Ors(expressions) =>
-        expressions.map(x => parens(e, x)).mkString(" OR ")
+        expressions.map(x => parens(e.selfThis, x)).mkString(" OR ")
       case ShortestPathExpression(s@ShortestPaths(r:RelationshipChain, _)) =>
         s"${s.name}(${pattern(r)})"
       case ReduceExpression(ReduceScope(Variable(acc), Variable(identifier), expression), init, list) =>

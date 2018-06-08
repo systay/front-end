@@ -16,11 +16,11 @@
 package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.ast.AstConstructionTestSupport
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{NodePattern, RelationshipChain, RelationshipPattern, RelationshipsPattern, _}
 import org.opencypher.v9_0.rewriting.rewriters.namePatternComprehensionPatternElements
 import org.opencypher.v9_0.util.ASTNode
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions.{NodePattern, RelationshipChain, RelationshipPattern, RelationshipsPattern}
 
 class namePatternComprehensionPatternElementsTest extends CypherFunSuite with AstConstructionTestSupport {
 
@@ -30,7 +30,7 @@ class namePatternComprehensionPatternElementsTest extends CypherFunSuite with As
                         RelationshipPattern(None, Seq.empty, None, None, SemanticDirection.OUTGOING) _,
                         NodePattern(None, Seq.empty, None) _) _) _, None, StringLiteral("foo") _) _
 
-    namePatternComprehensionPatternElements(input) match {
+    namePatternComprehensionPatternElements(Attributes(idGen))(input) match {
       case PatternComprehension(_, RelationshipsPattern(RelationshipChain(NodePattern(Some(_), _, _, _),
                                                                           RelationshipPattern(Some(_), _, _, _, _, _, _),
                                                                           NodePattern(Some(_), _, _, _))), _, _, _) => ()
@@ -46,6 +46,6 @@ class namePatternComprehensionPatternElementsTest extends CypherFunSuite with As
                                                            None,
                                                            StringLiteral("foo")_)_
 
-    namePatternComprehensionPatternElements(input) should equal(input)
+    namePatternComprehensionPatternElements(Attributes(idGen))(input) should equal(input)
   }
 }

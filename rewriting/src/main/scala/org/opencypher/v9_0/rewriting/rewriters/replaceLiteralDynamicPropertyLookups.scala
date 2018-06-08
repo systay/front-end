@@ -15,15 +15,16 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.expressions.{ContainerIndex, Property, StringLiteral}
+import org.opencypher.v9_0.expressions.{ContainerIndex, Property, PropertyKeyName, StringLiteral}
+import org.opencypher.v9_0.util.attribution.SameId
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
-import org.opencypher.v9_0.expressions.PropertyKeyName
 
+// RETURN n["foo"] -> n.foo
 case object replaceLiteralDynamicPropertyLookups extends Rewriter {
 
   private val instance = bottomUp(Rewriter.lift {
     case index @ ContainerIndex(expr, lit: StringLiteral) =>
-      Property(expr, PropertyKeyName(lit.value)(lit.position))(index.position)
+      Property(expr, PropertyKeyName(lit.value)(expr.position)(SameId(expr.id)))(index.position)(SameId(index.id))
   })
 
   override def apply(v: AnyRef): AnyRef = instance(v)

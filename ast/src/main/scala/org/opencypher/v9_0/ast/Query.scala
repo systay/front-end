@@ -15,11 +15,11 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.ast.semantics._
+import org.opencypher.v9_0.ast.semantics.{Scope, SemanticAnalysisTooling, SemanticCheckResult, SemanticCheckable, SemanticState, _}
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.{ASTNode, InputPosition}
-import org.opencypher.v9_0.ast.semantics.{Scope, SemanticAnalysisTooling, SemanticCheckResult, SemanticCheckable, SemanticState}
 
-case class Query(periodicCommitHint: Option[PeriodicCommitHint], part: QueryPart)(val position: InputPosition)
+case class Query(periodicCommitHint: Option[PeriodicCommitHint], part: QueryPart)(val position: InputPosition)(implicit override val idGen: IdGen)
   extends Statement with SemanticAnalysisTooling {
 
   override def returnColumns = part.returnColumns
@@ -37,7 +37,7 @@ sealed trait QueryPart extends ASTNode with SemanticCheckable {
   def returnColumns: List[String]
 }
 
-case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition) extends QueryPart {
+case class SingleQuery(clauses: Seq[Clause])(val position: InputPosition)(implicit override val idGen: IdGen) extends QueryPart {
   assert(clauses.nonEmpty)
 
   override def containsUpdates =
@@ -186,5 +186,5 @@ sealed trait Union extends QueryPart with SemanticAnalysisTooling {
   }
 }
 
-final case class UnionAll(part: QueryPart, query: SingleQuery)(val position: InputPosition) extends Union
-final case class UnionDistinct(part: QueryPart, query: SingleQuery)(val position: InputPosition) extends Union
+final case class UnionAll(part: QueryPart, query: SingleQuery)(val position: InputPosition)(implicit override val idGen: IdGen) extends Union
+final case class UnionDistinct(part: QueryPart, query: SingleQuery)(val position: InputPosition)(implicit override val idGen: IdGen) extends Union

@@ -18,6 +18,7 @@ package org.opencypher.v9_0.rewriting
 import org.opencypher.v9_0.ast._
 import org.opencypher.v9_0.ast.semantics.{SemanticState, SyntaxExceptionCreator}
 import org.opencypher.v9_0.rewriting.rewriters.{expandStar, normalizeReturnClauses, normalizeWithClauses}
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.inSequence
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
@@ -105,22 +106,23 @@ class ExpandStarTest extends CypherFunSuite with AstConstructionTestSupport {
   }
 
   private def assertRewrite(originalQuery: String, expectedQuery: String) {
-    val original = prepRewrite(originalQuery)
-    val expected = prepRewrite(expectedQuery)
+    val attributes = Attributes(idGen)
+    val original = prepRewrite(originalQuery, attributes)
+    val expected = prepRewrite(expectedQuery, attributes)
 
     val checkResult = original.semanticCheck(SemanticState.clean)
-    val rewriter = expandStar(checkResult.state)
+    val rewriter = expandStar(checkResult.state, attributes)
 
     val result = original.rewrite(rewriter)
     assert(result === expected)
   }
 
-  private def prepRewrite(q: String, multipleGraphs: Boolean = false) = {
+  private def prepRewrite(q: String, attributes: Attributes, multipleGraphs: Boolean = false) = {
     val mkException = new SyntaxExceptionCreator(q, Some(pos))
     val rewriter = if (multipleGraphs)
-      inSequence(normalizeReturnClauses(mkException), normalizeWithClauses(mkException))
+      inSequence(normalizeReturnClauses(mkException, attributes), normalizeWithClauses(mkException, attributes))
     else
-      inSequence(normalizeReturnClauses(mkException), normalizeWithClauses(mkException))
+      inSequence(normalizeReturnClauses(mkException, attributes), normalizeWithClauses(mkException, attributes))
     parser.parse(q).endoRewrite(rewriter)
   }
 }

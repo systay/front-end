@@ -15,6 +15,9 @@
  */
 package org.opencypher.v9_0.expressions
 
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.{ASTNode, InputPosition}
 
-case class Range(lower: Option[UnsignedIntegerLiteral], upper: Option[UnsignedIntegerLiteral])(val position: InputPosition) extends ASTNode
+case class Range(lower: Option[UnsignedIntegerLiteral], upper: Option[UnsignedIntegerLiteral])
+                (val position: InputPosition)
+                (implicit override val idGen: IdGen) extends ASTNode

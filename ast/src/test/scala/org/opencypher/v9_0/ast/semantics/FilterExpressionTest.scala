@@ -17,9 +17,11 @@ package org.opencypher.v9_0.ast.semantics
 
 import org.opencypher.v9_0.expressions.{DummyExpression, FilterExpression, True}
 import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.symbols._
 
 class FilterExpressionTest extends SemanticFunSuite {
+  private implicit val idGen = new SequentialIdGen()
 
   val dummyExpression = DummyExpression(
     possibleTypes = CTList(CTNode) | CTBoolean | CTList(CTString)

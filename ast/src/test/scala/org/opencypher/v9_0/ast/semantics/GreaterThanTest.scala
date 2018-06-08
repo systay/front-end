@@ -15,12 +15,11 @@
  */
 package org.opencypher.v9_0.ast.semantics
 
+import org.opencypher.v9_0.expressions
 import org.opencypher.v9_0.util.DummyPosition
 import org.opencypher.v9_0.util.symbols._
-import org.opencypher.v9_0.expressions
-import org.opencypher.v9_0.expressions.GreaterThan
 
-class GreaterThanTest extends InfixExpressionTestBase(expressions.GreaterThan(_, _)(DummyPosition(0))) {
+class GreaterThanTest extends InfixExpressionTestBase(expressions.GreaterThan(_, _)(DummyPosition(0))(_)) {
 
   test("shouldSupportComparingIntegers") {
     testValidTypes(CTInteger, CTInteger)(CTBoolean)

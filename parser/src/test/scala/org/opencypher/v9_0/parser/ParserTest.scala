@@ -15,12 +15,13 @@
  */
 package org.opencypher.v9_0.parser
 
+import org.opencypher.v9_0.ast.SequentialIds
 import org.opencypher.v9_0.util.InputPosition
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.parboiled.errors.InvalidInputError
 import org.parboiled.scala._
 
-trait ParserTest[T, J] extends CypherFunSuite {
+trait ParserTest[T, J] extends CypherFunSuite with SequentialIds {
 
   def convert(astNode: T): J
 

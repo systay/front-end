@@ -19,9 +19,11 @@ import org.opencypher.v9_0.ast.semantics.{SemanticCheckResult, SemanticExpressio
 import org.opencypher.v9_0.expressions.Expression.SemanticContext
 import org.opencypher.v9_0.expressions.{DummyExpression, FunctionInvocation, FunctionName}
 import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.symbols._
 
 abstract class FunctionTestBase(funcName: String) extends SemanticFunSuite {
+  private implicit val idGen: IdGen = new SequentialIdGen()
 
   protected val context: SemanticContext = SemanticContext.Simple
 

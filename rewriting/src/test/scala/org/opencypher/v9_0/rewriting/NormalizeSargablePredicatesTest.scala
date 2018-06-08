@@ -17,23 +17,22 @@ package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.ast.AstConstructionTestSupport
 import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.functions.Exists
 import org.opencypher.v9_0.rewriting.rewriters.normalizeSargablePredicates
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions._
-import org.opencypher.v9_0.expressions.functions.Exists
 
 class NormalizeSargablePredicatesTest extends CypherFunSuite with AstConstructionTestSupport {
 
   test("a.prop IS NOT NULL rewritten to: exists(a.prop)") {
     val input: Expression = IsNotNull(Property(varFor("a"), PropertyKeyName("prop")_)_)_
-    val output: Expression = Exists.asInvocation(Property(varFor("a"), PropertyKeyName("prop")_)_)(pos)
+    val output: Expression = Exists.asInvocation(Property(varFor("a"), PropertyKeyName("prop")_)_)(pos, idGen)
 
     normalizeSargablePredicates(input) should equal(output)
   }
 
   test("exists(a.prop) is not rewritten") {
-    val input: Expression = Exists.asInvocation(Property(varFor("a"), PropertyKeyName("prop")_)_)(pos)
-    val output: Expression = Exists.asInvocation(Property(varFor("a"), PropertyKeyName("prop")_)_)(pos)
+    val input: Expression = Exists.asInvocation(Property(varFor("a"), PropertyKeyName("prop")_)_)(pos, idGen)
+    val output: Expression = Exists.asInvocation(Property(varFor("a"), PropertyKeyName("prop")_)_)(pos, idGen)
 
     normalizeSargablePredicates(input) should equal(output)
   }

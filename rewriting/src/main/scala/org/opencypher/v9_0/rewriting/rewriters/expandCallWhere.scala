@@ -16,25 +16,26 @@
 package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.ast._
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 
 // Rewrites CALL proc WHERE <p> ==> CALL proc WITH * WHERE <p>
-case object expandCallWhere extends Rewriter {
+case class expandCallWhere(attributes: Attributes) extends Rewriter {
 
   private val instance = bottomUp(Rewriter.lift {
     case query@SingleQuery(clauses) =>
       val newClauses = clauses.flatMap {
         case unresolved@UnresolvedCall(_, _, _, Some(result@ProcedureResult(_, optWhere@Some(where)))) =>
-          val newResult = result.copy(where = None)(result.position)
-          val newUnresolved = unresolved.copy(declaredResult = Some(newResult))(unresolved.position)
-          val newItems = ReturnItems(includeExisting = true, Seq.empty)(where.position)
-          val newWith = With(distinct = false, newItems, None, None, None, optWhere)(where.position)
+          val newResult = result.copy(where = None)(result.position)(SameId(result.id))
+          val newUnresolved = unresolved.copy(declaredResult = Some(newResult))(unresolved.position)(attributes.copy(unresolved.id))
+          val newItems = ReturnItems(includeExisting = true, Seq.empty)(where.position)(attributes.copy(where.id))
+          val newWith = With(distinct = false, newItems, None, None, None, optWhere)(where.position)(attributes.copy(where.id))
           Seq(newUnresolved, newWith)
 
         case clause =>
           Some(clause)
       }
-      query.copy(clauses = newClauses)(query.position)
+      query.copy(clauses = newClauses)(query.position)(SameId(query.id))
   })
 
   override def apply(v: AnyRef): AnyRef =

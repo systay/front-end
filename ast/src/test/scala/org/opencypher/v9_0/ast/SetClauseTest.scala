@@ -15,13 +15,15 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.expressions.{DummyExpression, Property}
-import org.opencypher.v9_0.util.DummyPosition
-import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.ast.semantics.{SemanticFunSuite, SemanticState}
-import org.opencypher.v9_0.expressions.PropertyKeyName
+import org.opencypher.v9_0.expressions.{DummyExpression, Property, PropertyKeyName}
+import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
+import org.opencypher.v9_0.util.symbols._
 
 class SetClauseTest extends SemanticFunSuite {
+
+  private implicit val idGen: IdGen = new SequentialIdGen()
 
   test("shouldHaveMergedTypesOfAllAlternativesInSimpleCase") {
 
@@ -29,7 +31,6 @@ class SetClauseTest extends SemanticFunSuite {
     val property = Property(mapLiteral, PropertyKeyName("key")(DummyPosition(3)))(DummyPosition(5))
     val setItem = SetPropertyItem(property, DummyExpression(CTAny))(DummyPosition(42))
     val setClause = SetClause(Seq(setItem))(DummyPosition(6))
-
 
     val result = setClause.semanticCheck(SemanticState.clean)
 

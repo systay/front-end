@@ -19,7 +19,7 @@ import org.opencypher.v9_0.expressions.Multiply
 import org.opencypher.v9_0.util.DummyPosition
 import org.opencypher.v9_0.util.symbols._
 
-class MultiplyTest extends InfixExpressionTestBase(Multiply(_, _)(DummyPosition(0))) {
+class MultiplyTest extends InfixExpressionTestBase(Multiply(_, _)(DummyPosition(0))(_)) {
 
   // Infix specializations:
   // 1 * 1 => 1

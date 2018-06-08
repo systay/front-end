@@ -19,7 +19,7 @@ import org.opencypher.v9_0.expressions.Modulo
 import org.opencypher.v9_0.util.DummyPosition
 import org.opencypher.v9_0.util.symbols._
 
-class ModuloTest extends InfixExpressionTestBase(Modulo(_, _)(DummyPosition(0))) {
+class ModuloTest extends InfixExpressionTestBase(Modulo(_, _)(DummyPosition(0))(_)) {
 
   // Infix specializations:
   // 1 % 1 => 0

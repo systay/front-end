@@ -15,18 +15,17 @@
  */
 package org.opencypher.v9_0.ast.semantics
 
-import org.opencypher.v9_0.expressions.Expression
 import org.opencypher.v9_0.expressions.Expression.SemanticContext
+import org.opencypher.v9_0.expressions.{DummyExpression, Expression}
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.symbols.TypeSpec
 import org.opencypher.v9_0.util.{DummyPosition, InputPosition}
 
-case class ErrorExpression(
-                            error: SemanticError,
-                            possibleTypes: TypeSpec,
-                            position: InputPosition = DummyPosition(0)
-                          ) extends Expression
+case class ErrorExpression(error: SemanticError,
+                           possibleTypes: TypeSpec,
+                           position: InputPosition = DummyPosition(0))
+                          (override val idGen: IdGen = DummyExpression.idGen) extends Expression
 
-case class CustomExpression(
-                             semanticCheck: (SemanticContext, CustomExpression) => SemanticCheck,
-                             position: InputPosition = DummyPosition(0)
-                           ) extends Expression
+case class CustomExpression(semanticCheck: (SemanticContext, CustomExpression) => SemanticCheck,
+                            position: InputPosition = DummyPosition(0))
+                           (override val idGen: IdGen = DummyExpression.idGen) extends Expression

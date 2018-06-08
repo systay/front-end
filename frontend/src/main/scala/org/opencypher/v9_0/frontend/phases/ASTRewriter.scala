@@ -15,50 +15,52 @@
  */
 package org.opencypher.v9_0.frontend.phases
 
-import org.opencypher.v9_0.ast.UnaliasedReturnItem
-import org.opencypher.v9_0.ast.Statement
 import org.opencypher.v9_0.ast.semantics.SemanticState
+import org.opencypher.v9_0.ast.{Statement, UnaliasedReturnItem}
 import org.opencypher.v9_0.expressions.NotEquals
 import org.opencypher.v9_0.rewriting.RewriterStep._
-import org.opencypher.v9_0.rewriting.rewriters._
-import org.opencypher.v9_0.rewriting.{RewriterCondition, RewriterStepSequencer}
 import org.opencypher.v9_0.rewriting.conditions._
-import org.opencypher.v9_0.rewriting.rewriters.replaceLiteralDynamicPropertyLookups
+import org.opencypher.v9_0.rewriting.rewriters.{replaceLiteralDynamicPropertyLookups, _}
+import org.opencypher.v9_0.rewriting.{RewriterCondition, RewriterStep, RewriterStepSequencer}
+import org.opencypher.v9_0.util.attribution.Attributes
 
-class ASTRewriter(rewriterSequencer: (String) => RewriterStepSequencer,
+class ASTRewriter(rewriterSequencer: String => RewriterStepSequencer,
                   literalExtraction: LiteralExtraction,
                   getDegreeRewriting: Boolean) {
 
-  def rewrite(queryText: String, statement: Statement, semanticState: SemanticState): (Statement, Map[String, Any], Set[RewriterCondition]) = {
+  def rewrite(queryText: String, statement: Statement, semanticState: SemanticState, attributes: Attributes): (Statement, Map[String, Any], Set[RewriterCondition]) = {
 
-    val contract = rewriterSequencer("ASTRewriter")(
-      recordScopes(semanticState),
-      desugarMapProjection(semanticState),
-      normalizeComparisons,
+  val rewriters = Seq[RewriterStep](
+      recordScopes(semanticState, attributes),
+      desugarMapProjection(attributes),
+      normalizeComparisons(attributes),
       enableCondition(noReferenceEqualityAmongVariables),
       enableCondition(containsNoNodesOfType[UnaliasedReturnItem]),
       enableCondition(orderByOnlyOnVariables),
       enableCondition(noDuplicatesInReturnItems),
-      expandStar(semanticState),
+      expandStar(semanticState, attributes),
       enableCondition(containsNoReturnAll),
-      foldConstants,
-      nameMatchPatternElements,
-      nameUpdatingClauses,
+      foldConstants(attributes),
+      nameMatchPatternElements(attributes),
+      nameUpdatingClauses(attributes),
       enableCondition(noUnnamedPatternElementsInMatch),
-      normalizeMatchPredicates(getDegreeRewriting),
-      normalizeNotEquals,
+      normalizeMatchPredicates(getDegreeRewriting, attributes),
+      normalizeNotEquals(attributes),
       enableCondition(containsNoNodesOfType[NotEquals]),
       normalizeArgumentOrder,
       normalizeSargablePredicates,
       enableCondition(normalizedEqualsArguments),
-      addUniquenessPredicates,
-      isolateAggregation,
+      addUniquenessPredicates(attributes),
+      isolateAggregation(attributes),
       enableCondition(aggregationsAreIsolated),
       replaceLiteralDynamicPropertyLookups,
-      namePatternComprehensionPatternElements,
+      namePatternComprehensionPatternElements(attributes),
       enableCondition(noUnnamedPatternElementsInPatternComprehension),
-      inlineNamedPathsInPatternComprehensions
+      inlineNamedPathsInPatternComprehensions(attributes)
     )
+
+    val contract = rewriterSequencer("ASTRewriter")(rewriters:_*)
+
 
     val rewrittenStatement = statement.endoRewrite(contract.rewriter)
     val (extractParameters, extractedParameters) = literalReplacement(rewrittenStatement, literalExtraction)

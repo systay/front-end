@@ -15,13 +15,14 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.expressions._
-import org.opencypher.v9_0.util.DummyPosition
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.expressions
 import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
+import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class FindDuplicateRelationshipsTest extends CypherFunSuite {
+  private implicit val idGen = new SequentialIdGen()
 
   val pos = DummyPosition(0)
   val node = NodePattern(None, Seq.empty, None)(pos)

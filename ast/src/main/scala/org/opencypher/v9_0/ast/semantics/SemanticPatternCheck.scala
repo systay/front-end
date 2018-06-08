@@ -150,7 +150,7 @@ object SemanticPatternCheck extends SemanticAnalysisTooling {
 
       case x: InvalidNodePattern =>
         checkNodeProperties(ctx, x.properties) chain
-          error(s"Parentheses are required to identify nodes in patterns, i.e. (${x.id.name})", x.position)
+          error(s"Parentheses are required to identify nodes in patterns, i.e. (${x.lgVariable.name})", x.position)
 
       case x: NodePattern =>
         checkBaseVariable(ctx, x.baseNode, CTNode) chain

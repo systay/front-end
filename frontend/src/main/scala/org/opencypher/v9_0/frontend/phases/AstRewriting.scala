@@ -17,19 +17,21 @@ package org.opencypher.v9_0.frontend.phases
 
 import org.opencypher.v9_0.expressions.NotEquals
 import org.opencypher.v9_0.frontend.phases.CompilationPhaseTracer.CompilationPhase.AST_REWRITE
-import org.opencypher.v9_0.rewriting.rewriters.LiteralExtraction
 import org.opencypher.v9_0.rewriting.RewriterStepSequencer
 import org.opencypher.v9_0.rewriting.conditions._
+import org.opencypher.v9_0.rewriting.rewriters.LiteralExtraction
+import org.opencypher.v9_0.util.attribution.Attributes
 
 case class AstRewriting(sequencer: String => RewriterStepSequencer, literalExtraction: LiteralExtraction,
-                        getDegreeRewriting: Boolean = true// This does not really belong in the front end. Should move to a planner rewriter
+                        getDegreeRewriting: Boolean = true,// This does not really belong in the front end. Should move to a planner rewriter
+                       attributes: Attributes
 ) extends Phase[BaseContext, BaseState, BaseState] {
 
   private val astRewriter = new ASTRewriter(sequencer, literalExtraction, getDegreeRewriting)
 
   override def process(in: BaseState, context: BaseContext): BaseState = {
 
-    val (rewrittenStatement, extractedParams, _) = astRewriter.rewrite(in.queryText, in.statement(), in.semantics())
+    val (rewrittenStatement, extractedParams, _) = astRewriter.rewrite(in.queryText, in.statement(), in.semantics(), attributes)
 
     in.withStatement(rewrittenStatement).withParams(extractedParams)
   }

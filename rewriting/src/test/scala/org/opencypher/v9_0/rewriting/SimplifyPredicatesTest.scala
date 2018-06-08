@@ -16,11 +16,12 @@
 package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.rewriting.rewriters.simplifyPredicates
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class SimplifyPredicatesTest extends CypherFunSuite with PredicateTestSupport {
 
-  val rewriter = simplifyPredicates
+  val rewriter = simplifyPredicates(Attributes(idGen))
 
   test("double negation is removed") {
     not(not(P)) <=> P

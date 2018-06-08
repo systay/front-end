@@ -163,7 +163,7 @@ trait Clauses extends Parser
 
   private def RemoveItem: Rule1[ast.RemoveItem] = rule(
     group(Variable ~~ NodeLabels) ~~>> (ast.RemoveLabelItem(_, _))
-      | PropertyExpression ~~> ast.RemovePropertyItem
+      | PropertyExpression ~~> (ast.RemovePropertyItem(_))
   )
 
   private def WithBody: Rule4[ast.ReturnItemsDef, Option[ast.OrderBy], Option[Skip], Option[ast.Limit]] = {

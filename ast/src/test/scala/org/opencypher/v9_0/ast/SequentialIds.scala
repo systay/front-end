@@ -15,17 +15,8 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.expressions.FunctionName
-import org.opencypher.v9_0.util.attribution.SequentialIdGen
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 
-class FunctionNameTest extends CypherFunSuite {
-  private implicit val idGen = new SequentialIdGen()
-
-  test("equality should ignore case") {
-    FunctionName("foo")(null) should equal(FunctionName("FOO")(null))
-  }
-  test("equality should respect the name") {
-    FunctionName("foo")(null) should not equal FunctionName("FOOB")(null)
-  }
+trait SequentialIds {
+  implicit val idGen: IdGen = new SequentialIdGen()
 }

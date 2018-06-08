@@ -16,11 +16,11 @@
 package org.opencypher.v9_0.ast
 
 import org.opencypher.v9_0.ast.semantics.{SemanticCheckResult, SemanticExpressionCheck, SemanticState}
-import org.opencypher.v9_0.expressions.{DummyExpression, Expression}
+import org.opencypher.v9_0.expressions.{DummyExpression, Expression, TypeSignature}
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions.TypeSignature
 
 class ExpressionCallTypeCheckerTest extends CypherFunSuite with AstConstructionTestSupport {
 
@@ -96,7 +96,7 @@ class ExpressionCallTypeCheckerTest extends CypherFunSuite with AstConstructionT
     val semanticState = argExpressions.foldLeft(SemanticState.clean) {
       case (state, inner) => state.specifyType(inner, inner.possibleTypes).right.get
     }
-    val expr = TypeExpr(argExpressions)
+    val expr = TypeExpr(argExpressions)()
     val check = SemanticExpressionCheck.checkTypes(expr, ExpressionSignatures)(semanticState)
     (expr, check)
   }
@@ -112,7 +112,11 @@ class ExpressionCallTypeCheckerTest extends CypherFunSuite with AstConstructionT
     checkError(check.errors.map(_.msg.replaceAll("\\s+", " ")))
   }
 
-  case class TypeExpr(override val arguments: Seq[Expression]) extends Expression {
+  val _idGen = new SequentialIdGen()
+
+  case class TypeExpr(override val arguments: Seq[Expression])
+                     (override val idGen: IdGen = _idGen) extends Expression {
+
     override def position: InputPosition = pos
   }
 }

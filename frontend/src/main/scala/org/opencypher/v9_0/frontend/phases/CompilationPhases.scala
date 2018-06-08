@@ -17,23 +17,26 @@ package org.opencypher.v9_0.frontend.phases
 
 import org.opencypher.v9_0.ast.Statement
 import org.opencypher.v9_0.ast.semantics.SemanticState
-import org.opencypher.v9_0.rewriting.rewriters.{IfNoParameter, LiteralExtraction}
 import org.opencypher.v9_0.rewriting.RewriterStepSequencer
+import org.opencypher.v9_0.rewriting.rewriters.{IfNoParameter, LiteralExtraction}
+import org.opencypher.v9_0.util.attribution.Attributes
 
 object CompilationPhases {
 
-  def parsing(sequencer: String => RewriterStepSequencer, literalExtraction: LiteralExtraction = IfNoParameter): Transformer[BaseContext, BaseState, BaseState] =
-    Parsing.adds(BaseContains[Statement]) andThen
+  def parsing(sequencer: String => RewriterStepSequencer,
+              attributes: Attributes,
+              literalExtraction: LiteralExtraction = IfNoParameter): Transformer[BaseContext, BaseState, BaseState] =
+    Parsing(attributes).adds(BaseContains[Statement]) andThen
       SyntaxDeprecationWarnings andThen
-      PreparatoryRewriting andThen
+      PreparatoryRewriting(attributes) andThen
       SemanticAnalysis(warn = true).adds(BaseContains[SemanticState]) andThen
-      AstRewriting(sequencer, literalExtraction)
+      AstRewriting(sequencer, literalExtraction, attributes = attributes)
 
-  def lateAstRewriting: Transformer[BaseContext, BaseState, BaseState] =
+  def lateAstRewriting(attributes: Attributes): Transformer[BaseContext, BaseState, BaseState] =
     SemanticAnalysis(warn = false) andThen
-      Namespacer andThen
-      transitiveClosure andThen
-      rewriteEqualityToInPredicate andThen
-      CNFNormalizer andThen
-      LateAstRewriting
+      Namespacer(attributes) andThen
+      transitiveClosure(attributes) andThen
+      rewriteEqualityToInPredicate(attributes) andThen
+      CNFNormalizer(attributes) andThen
+      LateAstRewriting(attributes)
 }

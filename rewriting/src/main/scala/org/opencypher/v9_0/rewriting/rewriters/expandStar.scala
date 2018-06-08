@@ -18,26 +18,28 @@ package org.opencypher.v9_0.rewriting.rewriters
 import org.opencypher.v9_0.ast._
 import org.opencypher.v9_0.ast.semantics.SemanticState
 import org.opencypher.v9_0.expressions.{Expression, Variable}
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 
-case class expandStar(state: SemanticState) extends Rewriter {
+case class expandStar(state: SemanticState, attr: Attributes) extends Rewriter {
 
   def apply(that: AnyRef): AnyRef = instance(that)
 
   private val rewriter = Rewriter.lift {
-    case clause@With(_, values, _, _, _, _) if values.includeExisting =>
-      val newReturnItems = if (values.includeExisting) returnItems(clause, values.items) else values
-      clause.copy(returnItems = newReturnItems)(clause.position)
+    case clause: With if clause.returnItems.includeExisting =>
+      val newReturnItems = returnItems(clause, clause.returnItems.items)
+      clause.copy(returnItems = newReturnItems)(clause.position)(SameId(clause.id))
 
     case clause: PragmaWithout =>
       With(
         distinct = false,
         returnItems = returnItems(clause, Seq.empty, clause.excludedNames),
-        orderBy = None, skip = None, limit = None, where = None)(clause.position)
+        orderBy = None, skip = None, limit = None, where = None)(clause.position)(SameId(clause.id))
 
-    case clause@Return(_, values, _, _, _, excludedNames) if values.includeExisting =>
-      val newReturnItems = if (values.includeExisting) returnItems(clause, values.items, excludedNames) else values
-      clause.copy(returnItems = newReturnItems, excludedNames = Set.empty)(clause.position)
+    case clause: Return if clause.returnItems.includeExisting =>
+      val values = clause.returnItems
+      val newReturnItems = if (values.includeExisting) returnItems(clause, values.items, clause.excludedNames) else values
+      clause.copy(returnItems = newReturnItems, excludedNames = Set.empty)(clause.position)(SameId(clause.id))
 
     case expandedAstNode =>
       expandedAstNode
@@ -55,12 +57,13 @@ case class expandStar(state: SemanticState) extends Rewriter {
     val symbolNames = scope.symbolNames -- excludedNames
     val expandedItems = symbolNames.toIndexedSeq.sorted.map { id =>
       val idPos = scope.symbolTable(id).definition.position
-      val expr = Variable(id)(idPos)
+      // TODO This needs to get scope information from an Attribute later on
+      val expr = Variable(id)(idPos)(attr.idGen)
       val alias = expr.copyId
-      AliasedReturnItem(expr, alias)(clausePos)
+      AliasedReturnItem(expr, alias)(clausePos)(attr.idGen)
     }
 
     val newItems = expandedItems ++ listedItems
-    ReturnItems(includeExisting = false, newItems)(clausePos)
+    ReturnItems(includeExisting = false, newItems)(clausePos)(attr.idGen)
   }
 }

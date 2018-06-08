@@ -15,11 +15,10 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.ast._
-import org.opencypher.v9_0.expressions.{Expression, LogicalVariable}
+import org.opencypher.v9_0.ast.{Where, _}
+import org.opencypher.v9_0.expressions.{Expression, LogicalVariable, Variable}
 import org.opencypher.v9_0.util._
-import org.opencypher.v9_0.ast.Where
-import org.opencypher.v9_0.expressions.Variable
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 
 /**
  * This rewriter normalizes the scoping structure of a query, ensuring it is able to
@@ -47,57 +46,57 @@ import org.opencypher.v9_0.expressions.Variable
  * It uses multiple WITH clauses to ensure that cardinality and grouping are not altered, even in the presence
  * of aggregation.
  */
-case class normalizeWithClauses(mkException: (String, InputPosition) => CypherException) extends Rewriter {
+case class normalizeWithClauses(mkException: (String, InputPosition) => CypherException, attributes: Attributes) extends Rewriter {
 
   def apply(that: AnyRef): AnyRef = instance.apply(that)
 
-  private val clauseRewriter: (Clause => Seq[Clause]) = {
-    case clause @ With(_, ri: ReturnItems, None, _, _, None) =>
-      val (unaliasedReturnItems, aliasedReturnItems) = partitionReturnItems(ri.items)
+  private val clauseRewriter: Clause => Seq[Clause] = {
+    case clause @ With(_, returnItems: ReturnItems, None, _, _, None) =>
+      val (unaliasedReturnItems, aliasedReturnItems) = partitionReturnItems(returnItems.items)
       val initialReturnItems = unaliasedReturnItems ++ aliasedReturnItems
-      Seq(clause.copy(returnItems = ri.copy(items = initialReturnItems)(ri.position))(clause.position))
+      Seq(clause.copy(returnItems = returnItems.copy(items = initialReturnItems)(returnItems.position)(SameId(returnItems.id)))(clause.position)(SameId(clause.id)))
 
-    case clause @ With(distinct, ri: ReturnItems, orderBy, skip, limit, where) =>
+    case clause @ With(distinct, returnItems: ReturnItems, orderBy, skip, limit, where) =>
       clause.verifyOrderByAggregationUse((s,i) => throw mkException(s,i))
-      val (unaliasedReturnItems, aliasedReturnItems) = partitionReturnItems(ri.items)
+      val (unaliasedReturnItems, aliasedReturnItems) = partitionReturnItems(returnItems.items)
       val initialReturnItems = unaliasedReturnItems ++ aliasedReturnItems
       val (introducedReturnItems, updatedOrderBy, updatedWhere) = aliasOrderByAndWhere(aliasedReturnItems.map(i => i.expression -> i.alias.get.copyId).toMap, orderBy, where)
       val requiredVariablesForOrderBy = updatedOrderBy.map(_.dependencies).getOrElse(Set.empty) diff (introducedReturnItems.map(_.variable).toSet ++ initialReturnItems.flatMap(_.alias))
 
       if (orderBy == updatedOrderBy && where == updatedWhere) {
-        Seq(clause.copy(returnItems = ri.copy(items = initialReturnItems)(ri.position))(clause.position))
+        Seq(clause.copy(returnItems = returnItems.copy(items = initialReturnItems)(returnItems.position)(SameId(returnItems.id)))(clause.position)(SameId(clause.id)))
       } else if (introducedReturnItems.isEmpty) {
-        Seq(clause.copy(returnItems = ri.copy(items = initialReturnItems)(ri.position), orderBy = updatedOrderBy, where = updatedWhere)(clause.position))
+        Seq(clause.copy(returnItems = returnItems.copy(items = initialReturnItems)(returnItems.position)(SameId(returnItems.id)), orderBy = updatedOrderBy, where = updatedWhere)(clause.position)(SameId(clause.id)))
       } else {
-        val secondProjection = if (ri.includeExisting) {
+        val secondProjection = if (returnItems.includeExisting) {
           introducedReturnItems
         } else {
 
-          initialReturnItems.map(item =>
-            item.alias.fold(item)(alias => AliasedReturnItem(alias.copyId, alias.copyId)(item.position))
+          initialReturnItems.map((item: ReturnItem) =>
+            item.alias.fold(item)(alias => AliasedReturnItem(alias.copyId, alias.copyId)(item.position)(attributes.copy(item.id)))
           ) ++
-            requiredVariablesForOrderBy.toIndexedSeq.map(i => AliasedReturnItem(i.copyId, i.copyId)(i.position)) ++
+            requiredVariablesForOrderBy.toIndexedSeq.map(i => AliasedReturnItem(i.copyId, i.copyId)(i.position)(attributes.copy(i.id))) ++
             introducedReturnItems
         }
 
-        val firstProjection = if (distinct || ri.containsAggregate || ri.includeExisting) {
+        val firstProjection = if (distinct || returnItems.containsAggregate || returnItems.includeExisting) {
           initialReturnItems
         } else {
           val requiredReturnItems = introducedReturnItems.flatMap(_.expression.dependencies).toSet diff initialReturnItems
             .flatMap(_.alias).toSet
           val requiredVariables = requiredReturnItems ++ requiredVariablesForOrderBy
 
-          requiredVariables.toIndexedSeq.map(i => AliasedReturnItem(i.copyId, i.copyId)(i.position)) ++ initialReturnItems
+          requiredVariables.toIndexedSeq.map(i => AliasedReturnItem(i.copyId, i.copyId)(i.position)(attributes.copy(i.id))) ++ initialReturnItems
         }
 
         val introducedVariables = introducedReturnItems.map(_.variable.copyId)
 
         Seq(
-          With(distinct = distinct, returnItems = ri.copy(items = firstProjection)(ri.position),
-            orderBy = None, skip = None, limit = None, where = None)(clause.position),
-          With(distinct = false, returnItems = ri.copy(items = secondProjection)(ri.position),
-            orderBy = updatedOrderBy, skip = skip, limit = limit, where = updatedWhere)(clause.position),
-          PragmaWithout(introducedVariables)(clause.position)
+          With(distinct = distinct, returnItems = returnItems.copy(items = firstProjection)(returnItems.position)(attributes.copy(returnItems.id)),
+            orderBy = None, skip = None, limit = None, where = None)(clause.position)(attributes.copy(clause.id)),
+          With(distinct = false, returnItems = returnItems.copy(items = secondProjection)(returnItems.position)(attributes.copy(returnItems.id)),
+            orderBy = updatedOrderBy, skip = skip, limit = limit, where = updatedWhere)(clause.position)(attributes.copy(clause.id)),
+          PragmaWithout(introducedVariables)(clause.position)(attributes.copy(clause.id))
         )
       }
 
@@ -112,7 +111,7 @@ case class normalizeWithClauses(mkException: (String, InputPosition) => CypherEx
           (unaliasedItems, aliasedItems :+ i)
 
         case i if i.alias.isDefined =>
-          (unaliasedItems, aliasedItems :+ AliasedReturnItem(item.expression, item.alias.get.copyId)(item.position))
+          (unaliasedItems, aliasedItems :+ AliasedReturnItem(item.expression, item.alias.get.copyId)(item.position)(attributes.copy(item.id)))
 
         case _ =>
           // Unaliased return items in WITH will be preserved so that semantic check can report them as an error
@@ -160,7 +159,7 @@ case class normalizeWithClauses(mkException: (String, InputPosition) => CypherEx
           }
       }
     }
-    (additionalReturnItems, OrderBy(updatedSortItems)(originalOrderBy.position))
+    (additionalReturnItems, OrderBy(updatedSortItems)(originalOrderBy.position)(attributes.copy(originalOrderBy.id)))
   }
 
   private def aliasSortItem(existingAliases: Map[Expression, LogicalVariable], sortItem: SortItem): (Option[AliasedReturnItem], SortItem) = {
@@ -181,7 +180,7 @@ case class normalizeWithClauses(mkException: (String, InputPosition) => CypherEx
 
       case e: Expression if !e.containsAggregate =>
         val (maybeReturnItem, replacementVariable) = aliasExpression(existingAliases, e)
-        (maybeReturnItem, Where(replacementVariable)(originalWhere.position))
+        (maybeReturnItem, Where(replacementVariable)(originalWhere.position)(attributes.copy(originalWhere.id)))
 
       case e =>
         (None, originalWhere)
@@ -194,18 +193,18 @@ case class normalizeWithClauses(mkException: (String, InputPosition) => CypherEx
         (None, alias.copyId)
 
       case None =>
-        val newVariable = Variable(FreshIdNameGenerator.name(expression.position))(expression.position)
+        val newVariable = Variable(FreshIdNameGenerator.name(expression.position))(expression.position)(attributes.copy(expression.id))
         val newExpression = expression.endoRewrite(topDown(Rewriter.lift {
           case e: Expression =>
             existingAliases.get(e).map(_.copyId).getOrElse(e)
         }))
-        val newReturnItem = AliasedReturnItem(newExpression, newVariable)(expression.position)
+        val newReturnItem = AliasedReturnItem(newExpression, newVariable)(expression.position)(attributes.copy(expression.id))
         (Some(newReturnItem), newVariable.copyId)
     }
   }
 
   private val instance: Rewriter = bottomUp(Rewriter.lift {
     case query @ SingleQuery(clauses) =>
-      query.copy(clauses = clauses.flatMap(clauseRewriter))(query.position)
+      query.copy(clauses = clauses.flatMap(clauseRewriter))(query.position)(SameId(query.id))
   })
 }

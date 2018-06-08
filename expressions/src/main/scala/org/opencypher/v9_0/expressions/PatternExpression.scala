@@ -15,6 +15,8 @@
  */
 package org.opencypher.v9_0.expressions
 
-case class PatternExpression(pattern: RelationshipsPattern) extends Expression {
+import org.opencypher.v9_0.util.attribution.IdGen
+
+case class PatternExpression(pattern: RelationshipsPattern)(implicit override val idGen: IdGen) extends Expression {
   def position = pattern.position
 }

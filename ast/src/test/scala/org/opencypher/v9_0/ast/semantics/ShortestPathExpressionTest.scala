@@ -15,12 +15,13 @@
  */
 package org.opencypher.v9_0.ast.semantics
 
-import org.opencypher.v9_0.expressions._
-import org.opencypher.v9_0.util.symbols.{TypeSpec, _}
 import org.opencypher.v9_0.expressions
 import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
+import org.opencypher.v9_0.util.symbols.{TypeSpec, _}
 
 class ShortestPathExpressionTest extends SemanticFunSuite {
+  private implicit val idGen: IdGen = new SequentialIdGen()
 
   test("should get correct types for shortestPath") {
     // Given

@@ -16,9 +16,11 @@
 package org.opencypher.v9_0.ast.semantics
 
 import org.opencypher.v9_0.expressions.{DummyExpression, ListComprehension}
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.symbols._
 
 class FilteringExpressionTest extends SemanticFunSuite {
+  private implicit val idGen = new SequentialIdGen()
 
   test("shouldSemanticCheckPredicateInStateContainingTypedVariable") {
     val expression = DummyExpression(CTList(CTNode) | CTBoolean | CTList(CTString), pos)
@@ -29,7 +31,7 @@ class FilteringExpressionTest extends SemanticFunSuite {
         s.symbolTypes("x") should equal(CTNode | CTString)
         SemanticCheckResult.error(s, error)
       }
-    )
+    )()
 
     val filter = ListComprehension(variable("x"), expression, Some(predicate), None)(pos)
     val result = SemanticExpressionCheck.simple(filter)(SemanticState.clean)

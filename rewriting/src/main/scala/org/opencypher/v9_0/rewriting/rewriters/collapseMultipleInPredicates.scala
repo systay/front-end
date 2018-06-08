@@ -15,10 +15,10 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.expressions.{Expression, In, ListLiteral}
-import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 import org.opencypher.v9_0.expressions
-import org.opencypher.v9_0.expressions.{In, Ors}
+import org.opencypher.v9_0.expressions.{Expression, In, ListLiteral, Ors}
+import org.opencypher.v9_0.util.attribution.Attributes
+import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 
 import scala.collection.immutable.Iterable
 
@@ -26,7 +26,7 @@ import scala.collection.immutable.Iterable
 This class merges multiple IN predicates into larger ones.
 These can later be turned into index lookups or node-by-id ops
  */
-case object collapseMultipleInPredicates extends Rewriter {
+case class collapseMultipleInPredicates(attributes: Attributes) extends Rewriter {
 
   override def apply(that: AnyRef) = instance(that)
 
@@ -50,14 +50,13 @@ case object collapseMultipleInPredicates extends Rewriter {
       val groupedINPredicates = ins.groupBy(_.lhs)
       val flattenConst: Iterable[In] = groupedINPredicates.map {
         case (lhs, values) =>
-          val pos = lhs.position
-          expressions.In(lhs, ListLiteral(values.map(_.expr).toIndexedSeq)(pos))(pos)
+          expressions.In(lhs, ListLiteral(values.map(_.expr).toIndexedSeq)(lhs.position)(attributes.copy(lhs.id)))(lhs.position)(attributes.copy(lhs.id))
       }
 
       // Return the original non-rewritten predicates with our new ones
       nonRewritable ++ flattenConst match {
         case head :: Nil => head
-        case l => Ors(l.toSet)(predicate.position)
+        case l => Ors(l.toSet)(predicate.position)(attributes.copy(predicate.id))
       }
   })
 }

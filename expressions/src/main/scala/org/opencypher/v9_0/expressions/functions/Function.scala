@@ -17,6 +17,7 @@ package org.opencypher.v9_0.expressions.functions
 
 import org.opencypher.v9_0.expressions.{Expression, FunctionInvocation, FunctionName}
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 
 
 object Function {
@@ -99,12 +100,12 @@ object Function {
 abstract class Function {
   def name: String
 
-  def asFunctionName(implicit position: InputPosition): FunctionName = FunctionName(name)(position)
+  def asFunctionName(implicit position: InputPosition, idGen: IdGen): FunctionName = FunctionName(name)(position)
 
-  def asInvocation(argument: Expression, distinct: Boolean = false)(implicit position: InputPosition): FunctionInvocation =
+  def asInvocation(argument: Expression, distinct: Boolean = false)(implicit position: InputPosition, idGen: IdGen): FunctionInvocation =
     FunctionInvocation(asFunctionName, distinct = distinct, IndexedSeq(argument))(position)
 
-  def asInvocation(lhs: Expression, rhs: Expression)(implicit position: InputPosition): FunctionInvocation =
+  def asInvocation(lhs: Expression, rhs: Expression)(implicit position: InputPosition, idGen: IdGen): FunctionInvocation =
     FunctionInvocation(asFunctionName, distinct = false, IndexedSeq(lhs, rhs))(position)
 }
 

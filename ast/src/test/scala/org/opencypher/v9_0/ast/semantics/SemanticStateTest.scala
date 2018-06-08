@@ -15,13 +15,14 @@
  */
 package org.opencypher.v9_0.ast.semantics
 
-import org.opencypher.v9_0.expressions.{DummyExpression, Property, Variable}
+import org.opencypher.v9_0.expressions.{DummyExpression, Property, PropertyKeyName, Variable}
 import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.symbols.{CTAny, CTInteger, CTMap, CTNode, CTNumber, CTRelationship, CTString, TypeSpec}
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions.{PropertyKeyName, Variable}
 
 class SemanticStateTest extends CypherFunSuite {
+  implicit val idGen: IdGen = new SequentialIdGen()
 
   test("should declare variable once") {
     val variable1 = Variable("foo")(DummyPosition(0))

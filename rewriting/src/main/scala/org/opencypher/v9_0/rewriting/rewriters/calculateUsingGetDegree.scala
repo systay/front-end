@@ -15,19 +15,19 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.expressions._
-import org.opencypher.v9_0.expressions.{RelTypeName, SemanticDirection}
+import org.opencypher.v9_0.expressions.{RelTypeName, SemanticDirection, _}
+import org.opencypher.v9_0.util.attribution.Attributes
 
 /*
  * Calculates how to transform a pattern (a)-[:R1:R2...]->() to getDegree call
  * of that very pattern.
  */
-object calculateUsingGetDegree {
+case class calculateUsingGetDegree(attributes: Attributes) {
 
   def apply(expr: Expression, node: LogicalVariable, types: Seq[RelTypeName], dir: SemanticDirection): Expression = {
       types
-        .map(typ => GetDegree(node.copyId, Some(typ), dir)(typ.position))
-        .reduceOption[Expression](Add(_, _)(expr.position))
-        .getOrElse(GetDegree(node, None, dir)(expr.position))
+        .map(typ => GetDegree(node.copyId, Some(typ), dir)(typ.position)(attributes.copy(typ.id)))
+        .reduceOption[Expression](Add(_, _)(expr.position)(attributes.copy(expr.id)))
+        .getOrElse(GetDegree(node, None, dir)(expr.position)(attributes.copy(expr.id)))
     }
 }

@@ -15,9 +15,9 @@
  */
 package org.opencypher.v9_0.rewriting.rewriters
 
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{InequalityExpression, _}
+import org.opencypher.v9_0.util.attribution.SameId
 import org.opencypher.v9_0.util.{Rewriter, topDown}
-import org.opencypher.v9_0.expressions.InequalityExpression
 
 case object normalizeArgumentOrder extends Rewriter {
 
@@ -26,18 +26,18 @@ case object normalizeArgumentOrder extends Rewriter {
   private val instance: Rewriter = topDown(Rewriter.lift {
 
     // move id(n) on equals to the left
-    case predicate @ Equals(func@FunctionInvocation(_, _, _, _), _) if func.function == functions.Id =>
-      predicate
+    case predicate @ Equals(func: FunctionInvocation, _) if func.function == functions.Id =>
+      predicate.selfThis
 
-    case predicate @ Equals(lhs, rhs @ FunctionInvocation(_, _, _, _)) if rhs.function == functions.Id =>
-      predicate.copy(lhs = rhs, rhs = lhs)(predicate.position)
+    case predicate @ Equals(lhs, rhs: FunctionInvocation) if rhs.function == functions.Id =>
+      predicate.copy(lhs = rhs, rhs = lhs)(predicate.position)(SameId(predicate.id))
 
     // move n.prop on equals to the left
     case predicate @ Equals(Property(_, _), _) =>
-      predicate
+      predicate.selfThis
 
     case predicate @ Equals(lhs, rhs @ Property(_, _)) =>
-      predicate.copy(lhs = rhs, rhs = lhs)(predicate.position)
+      predicate.copy(lhs = rhs.selfThis, rhs = lhs)(predicate.position)(SameId(predicate.id))
 
     case inequality: InequalityExpression =>
       val lhsIsProperty = inequality.lhs.isInstanceOf[Property]

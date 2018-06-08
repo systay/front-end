@@ -16,5 +16,6 @@
 package org.opencypher.v9_0.expressions
 
 import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.attribution.IdGen
 
-case class CountStar()(val position: InputPosition) extends Expression
+case class CountStar()(val position: InputPosition)(implicit override val idGen: IdGen) extends Expression

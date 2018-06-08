@@ -16,11 +16,11 @@
 package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.ast._
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.{Variable, _}
+import org.opencypher.v9_0.rewriting.conditions.hasAggregateButIsNotAggregate
+import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.helpers.fixedPoint
 import org.opencypher.v9_0.util.{AggregationNameGenerator, InternalException, Rewriter, bottomUp}
-import org.opencypher.v9_0.expressions.Variable
-import org.opencypher.v9_0.rewriting.conditions.hasAggregateButIsNotAggregate
 
 /**
   * This rewriter makes sure that aggregations are on their own in RETURN/WITH clauses, so
@@ -38,7 +38,7 @@ import org.opencypher.v9_0.rewriting.conditions.hasAggregateButIsNotAggregate
   * WITH n.name AS x1, count(*) AS x2, n.foo as X3
   * RETURN { name: x1, count: x2 }
   */
-case object isolateAggregation extends Rewriter {
+case class isolateAggregation(attributes: Attributes) extends Rewriter {
   def apply(that: AnyRef): AnyRef = instance(that)
 
   private val rewriter = Rewriter.lift {
@@ -52,10 +52,12 @@ case object isolateAggregation extends Rewriter {
           val expressionsToIncludeInWith: Set[Expression] = others ++ extractExpressionsToInclude(withAggregations)
 
           val withReturnItems: Set[ReturnItem] = expressionsToIncludeInWith.map {
-            case e => AliasedReturnItem(e, Variable(AggregationNameGenerator.name(e.position))(e.position))(e.position)
+            e =>
+              val variable = Variable(AggregationNameGenerator.name(e.position))(e.position)(attributes.copy(e.id))
+              AliasedReturnItem(e, variable)(e.position)(attributes.copy(e.id))
           }
-          val pos = clause.position
-          val withClause = With(distinct = false, ReturnItems(includeExisting = false, withReturnItems.toIndexedSeq)(pos), None, None, None, None)(pos)
+          val returnItems = ReturnItems(includeExisting = false, withReturnItems.toIndexedSeq)(clause.position)(attributes.copy(clause.id))
+          val withClause = With(distinct = false, returnItems, None, None, None, None)(clause.position)(attributes.copy(clause.id))
 
           val expressionRewriter = createRewriterFor(withReturnItems)
           val resultClause = clause.endoRewrite(expressionRewriter)
@@ -63,14 +65,14 @@ case object isolateAggregation extends Rewriter {
           IndexedSeq(withClause, resultClause)
       }
 
-      q.copy(clauses = newClauses)(q.position)
+      q.copy(clauses = newClauses)(q.position)(SameId(q.id))
   }
 
   private def createRewriterFor(withReturnItems: Set[ReturnItem]): Rewriter = {
     def inner = Rewriter.lift {
       case original: Expression =>
         val rewrittenExpression = withReturnItems.collectFirst {
-          case item@AliasedReturnItem(expression, variable) if original == expression =>
+          case item@AliasedReturnItem(expression, _) if original == expression =>
             item.alias.get.copyId
         }
         rewrittenExpression getOrElse original
@@ -81,21 +83,21 @@ case object isolateAggregation extends Rewriter {
 
   private def extractExpressionsToInclude(originalExpressions: Set[Expression]): Set[Expression] = {
     val expressionsToGoToWith: Set[Expression] = fixedPoint {
-      (expressions: Set[Expression]) => expressions.flatMap {
-        case e@ReduceExpression(_, init, coll) if hasAggregateButIsNotAggregate(e) =>
-          Seq(init, coll)
+      expressions: Set[Expression] => expressions.flatMap {
+        case e: ReduceExpression if hasAggregateButIsNotAggregate(e) =>
+          Seq(e.init, e.list)
 
-        case e@FilterExpression(_, expr) if hasAggregateButIsNotAggregate(e) =>
-          Seq(expr)
+        case e: FilterExpression if hasAggregateButIsNotAggregate(e) =>
+          Seq(e.expression)
 
-        case e@ExtractExpression(_, expr) if hasAggregateButIsNotAggregate(e) =>
-          Seq(expr)
+        case e: ExtractExpression if hasAggregateButIsNotAggregate(e) =>
+          Seq(e.expression)
 
-        case e@ListComprehension(_, expr) if hasAggregateButIsNotAggregate(e) =>
-          Seq(expr)
+        case e: ListComprehension if hasAggregateButIsNotAggregate(e) =>
+          Seq(e.expression)
 
-        case e@DesugaredMapProjection(variable, items, _) if hasAggregateButIsNotAggregate(e) =>
-          items.map(_.exp) :+ variable
+        case e: DesugaredMapProjection if hasAggregateButIsNotAggregate(e) =>
+          e.items.map(_.exp) :+ e.name
 
         case e: IterablePredicateExpression  if hasAggregateButIsNotAggregate(e) =>
           val predicate: Expression = e.innerPredicate.getOrElse(throw new InternalException("Should never be empty"))

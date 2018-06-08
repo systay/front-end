@@ -15,14 +15,15 @@
  */
 package org.opencypher.v9_0.rewriting
 
-import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.ast.SequentialIds
+import org.opencypher.v9_0.expressions.{Equals, Not, NotEquals, _}
 import org.opencypher.v9_0.rewriting.rewriters.normalizeNotEquals
 import org.opencypher.v9_0.util.DummyPosition
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions.{Equals, Not, NotEquals}
 
 
-class NormalizeNotEqualsTest extends CypherFunSuite {
+class NormalizeNotEqualsTest extends CypherFunSuite with SequentialIds {
 
   val pos = DummyPosition(0)
   val lhs: Expression = StringLiteral("42")(pos)
@@ -30,13 +31,13 @@ class NormalizeNotEqualsTest extends CypherFunSuite {
 
   test("notEquals  iff  not(equals)") {
     val notEquals = NotEquals(lhs, rhs)(pos)
-    val output = notEquals.rewrite(normalizeNotEquals)
+    val output = notEquals.rewrite(normalizeNotEquals(Attributes(idGen)))
     val expected: Expression = Not(Equals(lhs, rhs)(pos))(pos)
     output should equal(expected)
   }
 
   test("should do nothing on other expressions") {
-    val output = lhs.rewrite(normalizeNotEquals)
+    val output = lhs.rewrite(normalizeNotEquals(Attributes(idGen)))
     output should equal(lhs)
   }
 }

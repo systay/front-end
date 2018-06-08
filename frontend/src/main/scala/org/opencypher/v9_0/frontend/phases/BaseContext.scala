@@ -16,6 +16,7 @@
 package org.opencypher.v9_0.frontend.phases
 
 import org.opencypher.v9_0.ast.semantics.SemanticErrorDef
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.{CypherException, InputPosition}
 
 trait BaseContext {
@@ -24,4 +25,5 @@ trait BaseContext {
   def exceptionCreator: (String, InputPosition) => CypherException
   def monitors: Monitors
   def errorHandler: Seq[SemanticErrorDef] => Unit
+  val astIdGen: IdGen
 }

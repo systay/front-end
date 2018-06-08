@@ -16,15 +16,16 @@
 package org.opencypher.v9_0.rewriting
 
 import org.mockito.Mockito._
+import org.opencypher.v9_0.expressions.Or
 import org.opencypher.v9_0.rewriting.rewriters.distributeLawsRewriter
 import org.opencypher.v9_0.util.Rewriter
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.expressions.Or
 
 class DistributeLawRewriterTest extends CypherFunSuite with PredicateTestSupport {
 
   val monitor = mock[AstRewritingMonitor]
-  val rewriter: Rewriter = distributeLawsRewriter()(monitor)
+  val rewriter: Rewriter = distributeLawsRewriter(Attributes(idGen))(monitor)
 
   test("(P or (Q and R))  iff  (P or Q) and (P or R)") {
     or(P, and(Q, R)) <=> and(or(P, Q), or(P, R))

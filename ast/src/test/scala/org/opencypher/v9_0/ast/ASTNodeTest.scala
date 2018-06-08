@@ -16,16 +16,19 @@
 package org.opencypher.v9_0.ast
 
 import org.opencypher.v9_0.util._
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class ASTNodeTest extends CypherFunSuite {
 
-  trait Exp extends ASTNode {
+  private implicit val _idGen: IdGen = new SequentialIdGen()
+
+  abstract class Exp(override val idGen: IdGen = _idGen) extends ASTNode {
     val position = DummyPosition(0)
   }
 
-  case class Val(int: Int) extends Exp
-  case class Add(lhs: Exp, rhs: Exp) extends Exp
+  case class Val(int: Int) extends Exp()
+  case class Add(lhs: Exp, rhs: Exp) extends Exp()
 
   test("rewrite should match and replace expressions") {
     val ast = Add(Val(1), Add(Val(2), Val(3)))
@@ -52,7 +55,8 @@ class ASTNodeTest extends CypherFunSuite {
   }
 
   test("rewrite should duplicate ASTNode carrying InputPosition") {
-    case class AddWithPos(lhs: Exp, rhs: Exp)(override val position: InputPosition) extends Exp
+    case class AddWithPos(lhs: Exp, rhs: Exp)
+                         (override val position: InputPosition, override val idGen: IdGen = new SequentialIdGen()) extends Exp
 
     val ast = Add(Val(1), AddWithPos(Val(2), Val(3))(DummyPosition(0)))
 

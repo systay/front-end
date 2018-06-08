@@ -15,8 +15,13 @@
  */
 package org.opencypher.v9_0.expressions
 
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.symbols.TypeSpec
 import org.opencypher.v9_0.util.{DummyPosition, InputPosition}
 
 case class DummyExpression(possibleTypes: TypeSpec,
-                           position: InputPosition = DummyPosition(0)) extends Expression
+                           position: InputPosition = DummyPosition(0))(implicit override val idGen: IdGen = DummyExpression.idGen) extends Expression
+
+object DummyExpression {
+  val idGen = new SequentialIdGen()
+}

@@ -15,16 +15,16 @@
  */
 package org.opencypher.v9_0.ast
 
-import org.opencypher.v9_0.ast.semantics.SemanticCheck
+import org.opencypher.v9_0.ast.semantics.{SemanticCheck, SemanticCheckable}
+import org.opencypher.v9_0.util.attribution.IdGen
 import org.opencypher.v9_0.util.{ASTNode, InputPosition}
-import org.opencypher.v9_0.ast.semantics.SemanticCheckable
 
 sealed trait MergeAction extends ASTNode with SemanticCheckable
 
-case class OnCreate(action: SetClause)(val position: InputPosition) extends MergeAction {
+case class OnCreate(action: SetClause)(val position: InputPosition)(implicit override val idGen: IdGen) extends MergeAction {
   def semanticCheck: SemanticCheck = action.semanticCheck
 }
 
-case class OnMatch(action: SetClause)(val position: InputPosition) extends MergeAction {
+case class OnMatch(action: SetClause)(val position: InputPosition)(implicit override val idGen: IdGen) extends MergeAction {
   def semanticCheck: SemanticCheck = action.semanticCheck
 }

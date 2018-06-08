@@ -16,14 +16,15 @@
 package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.ast.AstConstructionTestSupport
+import org.opencypher.v9_0.ast.semantics.SyntaxExceptionCreator
 import org.opencypher.v9_0.rewriting.rewriters.normalizeReturnClauses
+import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.util.{Rewriter, SyntaxException}
-import org.opencypher.v9_0.ast.semantics.SyntaxExceptionCreator
 
 class NormalizeReturnClausesTest extends CypherFunSuite with RewriteTest with AstConstructionTestSupport {
   val mkException = new SyntaxExceptionCreator("<Query>", Some(pos))
-  val rewriterUnderTest: Rewriter = normalizeReturnClauses(mkException)
+  val rewriterUnderTest: Rewriter = normalizeReturnClauses(mkException, Attributes(idGen))
 
   test("alias RETURN clause items") {
     assertRewrite(
