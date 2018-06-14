@@ -21,7 +21,6 @@ import org.scalatest.mock.MockitoSugar
 
 object ParserFixture extends MockitoSugar {
 
-  def parse(a: String): ast.Statement = parser.parse(a)
+  def parse(a: String): ast.Statement = new CypherParser(Attributes(new SequentialIdGen())).parse(a)
 
-  def parser = new CypherParser(Attributes(new SequentialIdGen()))
 }

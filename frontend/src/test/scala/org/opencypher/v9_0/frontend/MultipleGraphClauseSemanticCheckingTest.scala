@@ -22,7 +22,7 @@ import org.opencypher.v9_0.parser.ParserTest
 import org.opencypher.v9_0.util.attribution.{Attributes, IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.spi.MapToPublicExceptions
 import org.opencypher.v9_0.util.symbols.CypherType
-import org.opencypher.v9_0.util.{CypherException, InputPosition}
+import org.opencypher.v9_0.util.{CypherException, InputPosition, InputPositions}
 import org.opencypher.v9_0.{ast, parser}
 import org.parboiled.scala.Rule1
 
@@ -431,6 +431,8 @@ class MultipleGraphClauseSemanticCheckingTest
     }
 
 
+    override def maybePositions: Option[InputPositions] = None
+
     override def maybeSemantics = None
 
     override def maybeExtractedParams = None
@@ -446,6 +448,8 @@ class MultipleGraphClauseSemanticCheckingTest
     override def withSemanticState(s: SemanticState) = ???
 
     override def withParams(p: Map[String, Any]) = ???
+
+    override def withPositions(p: InputPositions): BaseState = ???
 
     override def initialFields: Map[String, CypherType] = Map.empty
   }

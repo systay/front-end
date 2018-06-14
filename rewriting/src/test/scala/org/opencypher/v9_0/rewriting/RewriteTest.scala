@@ -17,7 +17,7 @@ package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.ast.semantics.SemanticChecker
 import org.opencypher.v9_0.ast.{SequentialIds, Statement}
-import org.opencypher.v9_0.parser.ParserFixture.parser
+import org.opencypher.v9_0.parser.ParserFixture.parse
 import org.opencypher.v9_0.util.Rewriter
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
@@ -43,7 +43,7 @@ trait RewriteTest extends SequentialIds{
     assert(result === expected, "\n" + originalQuery)
   }
 
-  protected def parseForRewriting(queryText: String): Statement = parser.parse(queryText.replace("\r\n", "\n"))
+  protected def parseForRewriting(queryText: String): Statement = parse(queryText.replace("\r\n", "\n"))
 
   protected def rewrite(original: Statement): AnyRef =
     original.rewrite(rewriterUnderTest)
@@ -52,7 +52,7 @@ trait RewriteTest extends SequentialIds{
     original.endoRewrite(rewriterUnderTest)
 
   protected def assertIsNotRewritten(query: String) {
-    val original = parser.parse(query)
+    val original = parse(query)
     val result = original.rewrite(rewriterUnderTest)
     assert(result === original, "\n" + query)
   }

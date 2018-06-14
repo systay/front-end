@@ -19,7 +19,7 @@ import org.opencypher.v9_0.ast.semantics.{SemanticState, SemanticTable}
 import org.opencypher.v9_0.ast.{Query, Statement}
 import org.opencypher.v9_0.frontend.PlannerName
 import org.opencypher.v9_0.util.symbols.CypherType
-import org.opencypher.v9_0.util.{InputPosition, InternalException}
+import org.opencypher.v9_0.util.{InputPosition, InputPositions, InternalException}
 
 trait BaseState {
   def queryText: String
@@ -30,6 +30,7 @@ trait BaseState {
   def maybeSemantics: Option[SemanticState]
   def maybeExtractedParams: Option[Map[String, Any]]
   def maybeSemanticTable: Option[SemanticTable]
+  def maybePositions: Option[InputPositions]
 
   def accumulatedConditions: Set[Condition]
 
@@ -38,6 +39,7 @@ trait BaseState {
     case _ => false
   }
 
+  def positions(): InputPositions = maybePositions getOrElse fail("InputPositions")
   def statement(): Statement = maybeStatement getOrElse fail("Statement")
   def semantics(): SemanticState = maybeSemantics getOrElse fail("Semantics")
   def extractedParams(): Map[String, Any] = maybeExtractedParams getOrElse fail("Extracted parameters")
@@ -51,6 +53,7 @@ trait BaseState {
   def withSemanticTable(s: SemanticTable): BaseState
   def withSemanticState(s: SemanticState): BaseState
   def withParams(p: Map[String, Any]): BaseState
+  def withPositions(p: InputPositions): BaseState
 }
 
 case class InitialState(queryText: String,
@@ -58,12 +61,15 @@ case class InitialState(queryText: String,
   plannerName: PlannerName,
   initialFields: Map[String, CypherType] = Map.empty,
   maybeStatement: Option[Statement] = None,
+  maybePositions: Option[InputPositions] = None,
   maybeSemantics: Option[SemanticState] = None,
   maybeExtractedParams: Option[Map[String, Any]] = None,
   maybeSemanticTable: Option[SemanticTable] = None,
   accumulatedConditions: Set[Condition] = Set.empty) extends BaseState {
 
   override def withStatement(s: Statement): InitialState = copy(maybeStatement = Some(s))
+
+  override def withPositions(s: InputPositions): InitialState = copy(maybePositions = Some(s))
 
   override def withSemanticTable(s: SemanticTable): InitialState = copy(maybeSemanticTable = Some(s))
 

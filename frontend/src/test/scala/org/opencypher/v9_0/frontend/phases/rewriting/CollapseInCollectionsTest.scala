@@ -16,11 +16,12 @@
 package org.opencypher.v9_0.frontend.phases.rewriting
 
 import org.opencypher.v9_0.ast.Statement
-import org.opencypher.v9_0.rewriting.rewriters.collapseMultipleInPredicates
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.frontend.phases.CNFNormalizer
+import org.opencypher.v9_0.parser.ParserFixture
 import org.opencypher.v9_0.rewriting.AstRewritingTestSupport
+import org.opencypher.v9_0.rewriting.rewriters.collapseMultipleInPredicates
 import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
+import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class CollapseInCollectionsTest extends CypherFunSuite with AstRewritingTestSupport {
 
@@ -65,7 +66,7 @@ class CollapseInCollectionsTest extends CypherFunSuite with AstRewritingTestSupp
   }
 
   private def parse(query: String) = {
-    val parsed = parser.parse(query)
+    val parsed = ParserFixture.parse(query)
     val rewriter = CNFNormalizer(Attributes(new SequentialIdGen())).instance(TestContext())
     parsed.endoRewrite(rewriter)
   }

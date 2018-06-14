@@ -17,7 +17,7 @@ package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.ast._
 import org.opencypher.v9_0.expressions.{GetDegree, GreaterThan}
-import org.opencypher.v9_0.parser.ParserFixture.parser
+import org.opencypher.v9_0.parser.ParserFixture.parse
 import org.opencypher.v9_0.rewriting.rewriters.{LabelPredicateNormalizer, MatchPredicateNormalization, PropertyPredicateNormalizer}
 import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
@@ -185,7 +185,7 @@ class MatchPredicateNormalizerTest extends CypherFunSuite with RewriteTest {
     )
 
     val query = "MATCH (a) WHERE ()-[:R]->(a) RETURN a.prop"
-    val original = parser.parse(query)
+    val original = parse(query)
     val result = original.rewrite(rewriterUnderTest)
     assert(result === original, "\n" + query)
   }

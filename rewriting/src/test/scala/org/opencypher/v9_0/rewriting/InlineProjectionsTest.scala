@@ -16,6 +16,7 @@
 package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.ast.semantics.{SemanticState, SyntaxExceptionCreator}
+import org.opencypher.v9_0.parser.ParserFixture.parse
 import org.opencypher.v9_0.rewriting.rewriters.{expandStar, inlineProjections, normalizeReturnClauses, normalizeWithClauses}
 import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.helpers.StringHelper.RichString
@@ -104,7 +105,7 @@ class InlineProjectionsTest extends CypherFunSuite with AstRewritingTestSupport 
         |RETURN a
       """.stripMargin)
 
-    result should equal(parser.parse(
+    result should equal(parse(
       """MATCH (a)
         |WITH a AS a
         |WITH a AS a WHERE true
@@ -337,7 +338,7 @@ class InlineProjectionsTest extends CypherFunSuite with AstRewritingTestSupport 
       """.stripMargin
     val result = projectionInlinedAst(query)
 
-    result should equal(parser.parse(
+    result should equal(parse(
       """MATCH (owner)
         |WITH owner AS `owner`, COUNT(*) AS xyz
         |WITH owner AS `owner`, xyz AS `xyz`
@@ -399,7 +400,7 @@ class InlineProjectionsTest extends CypherFunSuite with AstRewritingTestSupport 
   private def projectionInlinedAst(queryText: String) = ast(queryText).endoRewrite(inlineProjections(Attributes(idGen)))
 
   private def ast(queryText: String) = {
-    val parsed = parser.parse(queryText)
+    val parsed = parse(queryText)
     val mkException = new SyntaxExceptionCreator(queryText, Some(pos))
     val normalized = parsed.endoRewrite(inSequence(normalizeReturnClauses(mkException, Attributes(idGen)), normalizeWithClauses(mkException, Attributes(idGen))))
     val checkResult = normalized.semanticCheck(SemanticState.clean)

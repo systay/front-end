@@ -16,11 +16,12 @@
 package org.opencypher.v9_0.frontend.phases.rewriting
 
 import org.opencypher.v9_0.ast.Query
-import org.opencypher.v9_0.rewriting.rewriters.mergeInPredicates
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.frontend.phases.CNFNormalizer
+import org.opencypher.v9_0.parser.ParserFixture.parse
 import org.opencypher.v9_0.rewriting.AstRewritingTestSupport
+import org.opencypher.v9_0.rewriting.rewriters.mergeInPredicates
 import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
+import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class mergeInPredicatesTest extends CypherFunSuite with AstRewritingTestSupport {
 
@@ -84,8 +85,8 @@ class mergeInPredicatesTest extends CypherFunSuite with AstRewritingTestSupport 
   }
 
   private def shouldRewrite(from: String, to: String) {
-    val original = parser.parse(from).asInstanceOf[Query]
-    val expected = parser.parse(to).asInstanceOf[Query]
+    val original = parse(from).asInstanceOf[Query]
+    val expected = parse(to).asInstanceOf[Query]
     val attributes = Attributes(new SequentialIdGen())
     val common = CNFNormalizer(attributes).instance(TestContext())
     val result = mergeInPredicates(attributes)(original)

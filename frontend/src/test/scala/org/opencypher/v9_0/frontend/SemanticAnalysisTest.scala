@@ -17,15 +17,15 @@ package org.opencypher.v9_0.frontend
 
 import org.opencypher.v9_0.ast.AstConstructionTestSupport
 import org.opencypher.v9_0.ast.semantics.SemanticErrorDef
-import org.opencypher.v9_0.util.symbols._
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.frontend.phases._
 import org.opencypher.v9_0.util.attribution.{Attributes, IdGen, SequentialIdGen}
+import org.opencypher.v9_0.util.symbols._
+import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class SemanticAnalysisTest extends CypherFunSuite with AstConstructionTestSupport {
 
   // This test invokes SemanticAnalysis twice because that's what the production pipeline does
-  val pipeline: Transformer[BaseContext, BaseState, BaseState] =
+  def pipeline: Transformer[BaseContext, BaseState, BaseState] =
     Parsing(Attributes(new SequentialIdGen())) andThen SemanticAnalysis(warn = true) andThen SemanticAnalysis(warn = false)
 
   test("can inject starting semantic state") {

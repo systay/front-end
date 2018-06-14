@@ -15,6 +15,8 @@
  */
 package org.opencypher.v9_0.util
 
+import org.opencypher.v9_0.util.attribution.{Attribute, Id}
+
 case class InputPosition(offset: Int, line: Int, column: Int) {
   self =>
 
@@ -51,3 +53,5 @@ object InputPosition {
 
   val NONE = InputPosition(0, 0, 0)
 }
+
+class InputPositions extends Attribute[InputPosition]

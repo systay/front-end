@@ -17,18 +17,29 @@ package org.opencypher.v9_0.parser
 
 import org.opencypher.v9_0.ast
 import org.opencypher.v9_0.util.attribution.{Attributes, IdGen}
-import org.opencypher.v9_0.util.{InputPosition, SyntaxException}
+import org.opencypher.v9_0.util.{InputPosition, InputPositions, InternalException, SyntaxException}
 import org.parboiled.scala._
 
+/**
+  * This class should not be used to parse multiple queries. It should only be used once.
+  */
 class CypherParser(attributes: Attributes) extends Parser
   with Statement
   with Expressions {
 
   override implicit val idGen: IdGen = attributes.idGen
+  override val positions = new InputPositions
+
+  private var _used = false
 
   @throws(classOf[SyntaxException])
   def parse(queryText: String, offset: Option[InputPosition] = None): ast.Statement =
-    parseOrThrow(queryText, offset, statements)
+    if (_used)
+      throw new InternalException("not safe to use the parser for more than one query!")
+    else {
+      _used = true
+      parseOrThrow(queryText, offset, statements)
+    }
 
   private val statements: Rule1[Seq[ast.Statement]] = rule {
     oneOrMore(WS ~ Statement ~ WS, separator = ch(';')) ~~ optional(ch(';')) ~~ EOI.label("end of input")

@@ -15,9 +15,11 @@
  */
 package org.opencypher.v9_0.parser
 
+import org.opencypher.v9_0.util.InputPositions
 import org.parboiled.scala._
 
 class BaseRulesTest extends ParserTest[Any, Any] with Base {
+  override val positions = new InputPositions
 
   test("testWhitespaceHandling") {
     implicit val parserToTest: Rule1[Boolean] = "a" ~ WS ~ "b" ~ push(true)

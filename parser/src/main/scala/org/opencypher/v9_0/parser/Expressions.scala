@@ -15,6 +15,7 @@
  */
 package org.opencypher.v9_0.parser
 
+import org.opencypher.v9_0.expressions.Expression
 import org.opencypher.v9_0.util.InputPosition
 import org.opencypher.v9_0.{expressions => ast}
 import org.parboiled.scala._
@@ -58,20 +59,24 @@ trait Expressions extends Parser
     Expression7 ~ zeroOrMore(WS ~ PartialComparisonExpression) ~~>> produceComparisons
   }
 
-  private case class PartialComparison(op: (ast.Expression, ast.Expression) => (InputPosition) => ast.Expression,
-                                       expr: ast.Expression, pos: InputPosition) {
-    def apply(lhs: ast.Expression) = op(lhs, expr)(pos)
+  private case class PartialComparison(op: (ast.Expression, ast.Expression) => InputPosition => ast.Expression,
+                                       rhs: ast.Expression, pos: InputPosition) {
+    def apply(lhs: ast.Expression): Expression = {
+      val x = op(lhs, rhs)(pos)
+      positions.set(x.id, pos)
+      x
+    }
   }
 
   private def PartialComparisonExpression: Rule1[PartialComparison] = (
-      group(operator("=") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(eq, expr, pos) }
-    | group(operator("~") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(eqv, expr, pos) }
-    | group(operator("<>") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(ne, expr, pos) }
-    | group(operator("!=") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(bne, expr, pos) }
-    | group(operator("<") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(lt, expr, pos) }
-    | group(operator(">") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(gt, expr, pos) }
-    | group(operator("<=") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(lte, expr, pos) }
-    | group(operator(">=") ~~ Expression7) ~~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(gte, expr, pos) } )
+      group(operator("=") ~~ Expression7) ~!~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(eq, expr, pos) }
+    | group(operator("~") ~~ Expression7) ~!~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(eqv, expr, pos) }
+    | group(operator("<>") ~~ Expression7) ~!~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(ne, expr, pos) }
+    | group(operator("!=") ~~ Expression7) ~!~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(bne, expr, pos) }
+    | group(operator("<") ~~ Expression7) ~!~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(lt, expr, pos) }
+    | group(operator(">") ~~ Expression7) ~!~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(gt, expr, pos) }
+    | group(operator("<=") ~~ Expression7) ~!~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(lte, expr, pos) }
+    | group(operator(">=") ~~ Expression7) ~!~>> { expr: ast.Expression => pos: InputPosition => PartialComparison(gte, expr, pos) } )
 
   private def eq(lhs:ast.Expression, rhs:ast.Expression): InputPosition => ast.Expression = ast.Equals(lhs, rhs)
   private def eqv(lhs:ast.Expression, rhs:ast.Expression): InputPosition => ast.Expression = ast.Equivalent(lhs, rhs)
@@ -91,7 +96,7 @@ trait Expressions extends Parser
         val result = ListBuffer.empty[ast.Expression]
         for (rhs <- more) {
           result.append(rhs(lhs))
-          lhs = rhs.expr
+          lhs = rhs.rhs
         }
         ast.Ands(Set(result: _*))
     }

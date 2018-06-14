@@ -17,14 +17,13 @@ package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.ast.SequentialIds
 import org.opencypher.v9_0.expressions.Parameter
+import org.opencypher.v9_0.parser.ParserFixture.parse
 import org.opencypher.v9_0.rewriting.rewriters.{Forced, IfNoParameter, LiteralExtraction, literalReplacement}
 import org.opencypher.v9_0.util.symbols._
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 
 class LiteralReplacementTest extends CypherFunSuite with SequentialIds {
-
-  import org.opencypher.v9_0.parser.ParserFixture.parser
 
   test("should extract starts with patterns") {
     assertRewrite("RETURN x STARTS WITH 'Pattern' as X", "RETURN x STARTS WITH {`  AUTOSTRING0`} as X", Map("  AUTOSTRING0" -> "Pattern"))
@@ -130,8 +129,8 @@ class LiteralReplacementTest extends CypherFunSuite with SequentialIds {
   }
 
   private def assertRewrite(originalQuery: String, expectedQuery: String, replacements: Map[String, Any], extractLiterals: LiteralExtraction = IfNoParameter) {
-    val original = parser.parse(originalQuery)
-    val expected = parser.parse(expectedQuery).endoRewrite(fixParameterTypeExpectations)
+    val original = parse(originalQuery)
+    val expected = parse(expectedQuery).endoRewrite(fixParameterTypeExpectations)
 
     val (rewriter, replacedLiterals) = literalReplacement(original, extractLiterals)
 

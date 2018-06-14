@@ -18,6 +18,7 @@ package org.opencypher.v9_0.frontend.prettifier
 import org.opencypher.v9_0.ast.AstConstructionTestSupport
 import org.opencypher.v9_0.expressions.Expression
 import org.opencypher.v9_0.parser.Expressions
+import org.opencypher.v9_0.util.InputPositions
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 import org.parboiled.scala.{Parser, ReportingParseRunner}
 
@@ -26,6 +27,8 @@ class ExpressionStringifierTest
     with AstConstructionTestSupport with Parser with Expressions {
   val stringifier = ExpressionStringifier()
   val parser = ReportingParseRunner(Expression)
+
+  override val positions: InputPositions = new InputPositions
 
   val tests: Seq[(String, String)] =
     Seq[(String, String)](

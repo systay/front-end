@@ -17,7 +17,7 @@ package org.opencypher.v9_0.rewriting
 
 import org.opencypher.v9_0.ast.semantics.{SemanticState, SyntaxExceptionCreator}
 import org.opencypher.v9_0.ast.{SequentialIds, Statement}
-import org.opencypher.v9_0.parser.ParserFixture.parser
+import org.opencypher.v9_0.parser.ParserFixture
 import org.opencypher.v9_0.rewriting.rewriters.{desugarMapProjection, normalizeReturnClauses, normalizeWithClauses, recordScopes}
 import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
@@ -73,7 +73,7 @@ class DesugarDesugaredMapProjectionTest extends CypherFunSuite with SequentialId
         val mkException = new SyntaxExceptionCreator(originalQuery, None)
         val attributes = Attributes(idGen)
         val sequence: Rewriter = inSequence(normalizeReturnClauses(mkException, attributes), normalizeWithClauses(mkException, attributes))
-        val originalAst = parser.parse(q).endoRewrite(sequence)
+        val originalAst = ParserFixture.parse(q).endoRewrite(sequence)
         val semanticCheckResult = originalAst.semanticCheck(SemanticState.clean)
         val withScopes = originalAst.endoRewrite(recordScopes(semanticCheckResult.state, attributes))
 

@@ -16,11 +16,14 @@
 package org.opencypher.v9_0.parser
 
 import org.opencypher.v9_0.{expressions => exp}
-import org.opencypher.v9_0.util.InputPosition
+import org.opencypher.v9_0.util.{InputPosition, InputPositions}
 import org.opencypher.v9_0.util.test_helpers.TestName
 import org.parboiled.scala._
 
 trait ParserAstTest[AST] extends ParserTest[AST, AST] with TestName {
+  self: Base =>
+  override val positions = new InputPositions
+
   final override def convert(ast: AST): AST = ast
 
   final def yields(expr: (InputPosition) => AST)(implicit parser: Rule1[AST]): Unit = parsing(testName) shouldGive expr
