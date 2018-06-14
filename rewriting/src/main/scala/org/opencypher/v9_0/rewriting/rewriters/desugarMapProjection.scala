@@ -36,8 +36,9 @@ case class desugarMapProjection(attributes: Attributes) extends Rewriter {
       def propertySelect(variable: Variable, name: String): LiteralEntry = {
         val key = PropertyKeyName(name)(variable.position)(attributes.copy(variable.id))
         val idPos = definitionPos.getOrElse(throw new InternalException("MapProjection definition pos is not known"))
-        // TODO broken s**t
-        val newIdentifier = Variable(id.name)(idPos)(attributes.idGen)
+        // TODO We need to keep track of input-positions because of the semantic table using them for magic. this will go away
+        // once we use Id and not InputPos for this stuff
+        val newIdentifier = Variable(id.name)(idPos)(attributes.copy(e.id))
         val value = Property(newIdentifier, key)(variable.position)(attributes.copy(variable.id))
         LiteralEntry(key, value)(variable.position)(attributes.copy(variable.id))
       }

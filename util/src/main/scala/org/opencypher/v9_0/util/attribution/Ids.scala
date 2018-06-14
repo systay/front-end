@@ -22,17 +22,17 @@ object Id {
 }
 
 trait IdGen {
-  def id: Id
+  def id(): Id
 }
 
 class SequentialIdGen(initialValue: Int = 0) extends IdGen {
   private var i: Int = initialValue
 
-  override def id: Id = {
+  override def id(): Id = {
     val id = Id(i)
     i += 1
     id
   }
 }
 
-case class SameId(id: Id) extends IdGen
+case class SameId(override val id: Id) extends IdGen

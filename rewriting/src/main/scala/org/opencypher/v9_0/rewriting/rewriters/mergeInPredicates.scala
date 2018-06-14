@@ -78,11 +78,12 @@ case class mergeInPredicates(attributes: Attributes) extends Rewriter {
   private def collectInPredicates(merge: (Seq[Expression], Seq[Expression]) => Seq[Expression])
                                  (expressions: Expression*): Map[Expression, Seq[Expression]] = {
     val maps = expressions.map(_.treeFold(Map.empty[Expression, Seq[Expression]]) {
-      case In(a, ListLiteral(exprs)) => map => {
-        //if there is already a list associated with `a`, do map(a) ++ exprs otherwise exprs
-        val values = map.get(a).map(current => merge(current, exprs)).getOrElse(exprs).distinct
-        (map + (a -> values), None)
-      }
+      case In(a, ListLiteral(exprs)) =>
+        map => {
+          //if there is already a list associated with `a`, do map(a) ++ exprs otherwise exprs
+          val values = map.get(a).map(current => merge(current, exprs)).getOrElse(exprs).distinct
+          (map + (a -> values), None)
+        }
     })
     //Take list of maps, [map1,map2,...] and merge the using the provided `merge` to
     //merge lists
