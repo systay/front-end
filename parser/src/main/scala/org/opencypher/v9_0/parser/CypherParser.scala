@@ -28,17 +28,18 @@ class CypherParser(attributes: Attributes) extends Parser
   with Expressions {
 
   override implicit val idGen: IdGen = attributes.idGen
-  override val positions = new InputPositions
+  override protected val positions = new InputPositions
 
+  // TODO: This is a hack. If we can't re-use the parser, we should design it differently.
   private var _used = false
 
   @throws(classOf[SyntaxException])
-  def parse(queryText: String, offset: Option[InputPosition] = None): ast.Statement =
+  def parse(queryText: String, offset: Option[InputPosition] = None): ParseResult =
     if (_used)
       throw new InternalException("not safe to use the parser for more than one query!")
     else {
       _used = true
-      parseOrThrow(queryText, offset, statements)
+      ParseResult(parseOrThrow(queryText, offset, statements), positions)
     }
 
   private val statements: Rule1[Seq[ast.Statement]] = rule {
@@ -46,3 +47,5 @@ class CypherParser(attributes: Attributes) extends Parser
   }
 
 }
+
+case class ParseResult(statement: ast.Statement, positions: InputPositions)

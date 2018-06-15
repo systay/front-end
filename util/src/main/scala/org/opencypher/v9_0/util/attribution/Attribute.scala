@@ -34,12 +34,24 @@ trait Attribute[T] {
     array(id.x).value
   }
 
+  def contains(id: Id): Boolean = isDefinedAt(id)
+
   def isDefinedAt(id: Id): Boolean = {
     array.size > id.x && array(id.x).hasValue
   }
 
   def getOrElse(id: Id, other: => T): T = {
     if (isDefinedAt(id)) get(id) else other
+  }
+
+  def getOrUpdate(id: Id, other: => T): T = {
+    if(isDefinedAt(id))
+      get(id)
+    else {
+      val result = other
+      set(id, result)
+      result
+    }
   }
 
   def iterator: Iterator[(Id, T)] = new Iterator[(Id, T)]() {

@@ -23,8 +23,12 @@ import org.opencypher.v9_0.util.attribution.Attributes
 case class Parsing(attributes: Attributes) extends Phase[BaseContext, BaseState, BaseState] {
   private val parser = new CypherParser(attributes)
 
-  override def process(in: BaseState, ignored: BaseContext): BaseState =
-    in.withStatement(parser.parse(in.queryText, in.startPosition))
+  override def process(in: BaseState, ignored: BaseContext): BaseState = {
+    val parseResult = parser.parse(in.queryText, in.startPosition)
+    in.
+      withStatement(parseResult.statement).
+      withPositions(parseResult.positions)
+  }
 
   override val phase = PARSING
 

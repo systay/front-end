@@ -26,7 +26,7 @@ import org.parboiled.support.IndexRange
 trait Base extends Parser {
 
   implicit val idGen: IdGen
-  val positions: InputPositions
+  protected val positions: InputPositions
 
 
   def OpChar = rule("an operator char") { anyOf("|^&<>=?!:+-*/%~") }
