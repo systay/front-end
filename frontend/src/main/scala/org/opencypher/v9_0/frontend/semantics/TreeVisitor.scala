@@ -15,6 +15,7 @@
  */
 package org.opencypher.v9_0.frontend.semantics
 
+import org.opencypher.v9_0.util.ASTNode
 import org.opencypher.v9_0.util.Foldable._
 
 import scala.collection.mutable
@@ -27,15 +28,19 @@ object TreeVisitor {
     val todo = mutable.ArrayStack[(Any, Direction[A])]((treeRoot, Down(initialValue)))
 
     while (todo.nonEmpty) {
-      todo.pop() match {
-        case (curr, Down(state)) =>
-          val newState = topDown.visit(curr, state)
-          todo.push((curr, Up()))
+      val current = todo.pop()
+      current match {
+        case (curr, d@Down(state)) =>
+          val nextState = if(curr.isInstanceOf[ASTNode]) {
+            val newState = topDown.visit(curr, state)
+            todo.push((curr, Up()))
+            Down(newState)
+          } else d
 
           // If we want to change the tree rewriting framework - change this
           val children: Iterator[AnyRef] = curr.reverseChildren
           children.foreach { child =>
-            todo.push(child, Down(newState))
+            todo.push(child, nextState)
           }
 
         case (curr, Up()) =>
@@ -59,8 +64,17 @@ object TopDownVisitor {
                     b: TopDownVisitor[B],
                     initA: A,
                     initB: B): TopDownVisitor[(A,B)] = ???
+
+  def empty = new TopDownVisitor[Unit] {
+    override def visit(x: Any, acc: Unit): Unit = {}
+  }
 }
 
+object BottomUpVisitor {
+  def empty = new BottomUpVisitor {
+    override def visit(x: Any): Unit = {}
+  }
+}
 trait BottomUpVisitor {
   def visit(x: Any): Unit
 }

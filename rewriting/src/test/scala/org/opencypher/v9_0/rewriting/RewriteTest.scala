@@ -39,8 +39,6 @@ trait RewriteTest extends SequentialIds{
           s"""The query was rewritten in the wrong way.
              |Expected: $expected
              |   Found: $result""".stripMargin)
-
-    assert(result === expected, "\n" + originalQuery)
   }
 
   protected def parseForRewriting(queryText: String): Statement = parse(queryText.replace("\r\n", "\n"))
