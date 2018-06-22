@@ -32,9 +32,9 @@ import org.opencypher.v9_0.util.{ASTNode, InternalException}
   * Objects of this class should not be re-used.
   */
 
-object Scoper extends Scoping {
+class Scoper(scopes: Scopes) extends Scoping {
 
-  override def scope(ast: ASTNode, currentScope: Scope, scopes: Scopes): ScopingResult =
+  override def scope(ast: ASTNode, currentScope: Scope): ScopingResult =
     ast match {
         // if we are dealing with ORDER BY and the bi-scope has already been defined.
       case ast: ASTNode if scopes.contains(ast.id) =>

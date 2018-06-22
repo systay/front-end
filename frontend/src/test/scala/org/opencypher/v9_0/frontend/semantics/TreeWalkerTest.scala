@@ -8,10 +8,12 @@ import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class TreeWalkerTest extends CypherFunSuite {
+  val binder = mock[VariableBinder]
+
   test("should visit things in the correct order") {
     var seenNodes = Seq[Class[_]]()
     val scoping = new Scoping {
-      override def scope(ast: ASTNode, incoming: Scope, scopes: Scopes): ScopingResult = {
+      override def scope(ast: ASTNode, incoming: Scope): ScopingResult = {
         seenNodes = seenNodes :+ ast.getClass
         ScopingResult(None, None)
       }
@@ -19,7 +21,7 @@ class TreeWalkerTest extends CypherFunSuite {
 
     val parser = new CypherParser(Attributes(new SequentialIdGen()))
     val x = parser.parse("MATCH (a) WITH a.prop as x ORDER BY a.foo, x RETURN *")
-    new TreeWalker(scoping, new Scopes).visit(x.statement)
+    new TreeWalker(scoping, binder).visit(x.statement)
 
 
     // These are the nodes in the order they are seen going down

@@ -1,5 +1,7 @@
 package org.opencypher.v9_0.frontend.semantics
 
+import org.mockito.ArgumentMatchers._
+import org.mockito.Mockito._
 import org.opencypher.v9_0.ast._
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.parser.CypherParser
@@ -8,13 +10,15 @@ import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class ScopingTest extends CypherFunSuite {
 
+  val binder = mock[VariableBinder]
+  when(binder.bind(any(), any(), any())).thenReturn(BindingAllowed)
 
   test("WITH creates sibling scopes") {
     val parser = new CypherParser(Attributes(new SequentialIdGen()))
     val x = parser.parse("MATCH (a) WITH a.prop as x RETURN *")
     val scopes = new Scopes
 
-    new TreeWalker(Scoper, scopes).visit(x.statement)
+    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
 
     val matchNode = x.statement.findByClass[Match]
     val returnNode = x.statement.findByClass[Return]
@@ -32,7 +36,7 @@ class ScopingTest extends CypherFunSuite {
     val x = parser.parse("MATCH (a) WITH a ORDER BY a.prop RETURN *")
     val scopes = new Scopes
 
-    new TreeWalker(Scoper, scopes).visit(x.statement)
+    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
 
     val orderBy = x.statement.findByClass[OrderBy]
     val orderByScope = scopes.get(orderBy.id)
@@ -55,7 +59,7 @@ class ScopingTest extends CypherFunSuite {
     val x = parser.parse("CREATE (a) FOREACH(x in [1,2,3] | SET a.prop = x) REMOVE a.prop")
     val scopes = new Scopes
 
-    new TreeWalker(Scoper, scopes).visit(x.statement)
+    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
 
     val create = x.statement.findByClass[Create]
     val set = x.statement.findByClass[SetClause]
@@ -80,7 +84,7 @@ class ScopingTest extends CypherFunSuite {
     val x = parser.parse("RETURN [ x in $param | x + 12 ]")
     val scopes = new Scopes
 
-    new TreeWalker(Scoper, scopes).visit(x.statement)
+    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
 
     val returnClass = x.statement.findByClass[Return]
     val listComp = x.statement.findByClass[ListComprehension]
@@ -99,7 +103,7 @@ class ScopingTest extends CypherFunSuite {
     val x = parser.parse("MATCH (a: Person) RETURN [ (a)-[:FRIEND]->(b) | b.name ]")
     val scopes = new Scopes
 
-    new TreeWalker(Scoper, scopes).visit(x.statement)
+    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
 
     val returnClass = x.statement.findByClass[Return]
     val pattComp = x.statement.findByClass[PatternComprehension]
@@ -120,7 +124,7 @@ class ScopingTest extends CypherFunSuite {
     val x = parser.parse("RETURN 1 as X UNION RETURN '1' AS X")
     val scopes = new Scopes
 
-    new TreeWalker(Scoper, scopes).visit(x.statement)
+    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
 
     val integer = x.statement.findByClass[SignedIntegerLiteral]
     val string = x.statement.findByClass[StringLiteral]

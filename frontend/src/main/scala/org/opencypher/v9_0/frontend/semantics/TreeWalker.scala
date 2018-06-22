@@ -20,22 +20,24 @@ import org.opencypher.v9_0.util.Foldable._
 
 import scala.collection.mutable
 
-class TreeWalker(scoping: Scoping, scopes: Scopes) {
+class TreeWalker(scoping: Scoping, variableBinding: VariableBinding) {
   def visit(astRoot: ASTNode): Unit = {
     val todo = new mutable.ArrayStack[Move]()
     todo.push(Down(astRoot))
     val scopeForEntireQuery = new NormalScope()
 
     var currentScope = scopeForEntireQuery.createInnerScope()
+    var currentBindingMode: BindingMode = ReferenceOnly
 
     while (todo.nonEmpty) {
       val currentNode = todo.pop()
 
       currentNode match {
         case Down(ast: ASTNode) =>
-          val scopingResult = scoping.scope(ast, currentScope, scopes)
+          val scopingResult = scoping.scope(ast, currentScope)
+          todo.push(Up(ast, scopingResult.comingUpScope, Some(currentBindingMode)))
+          currentBindingMode = variableBinding.bind(ast, currentScope, currentBindingMode)
 
-          todo.push(Up(ast, scopingResult.comingUpScope))
           scopingResult.changeCurrentScopeTo.foreach(s => currentScope = s)
           ast.reverseChildren.foreach(child =>
             todo.push(Down(child))
@@ -46,8 +48,9 @@ class TreeWalker(scoping: Scoping, scopes: Scopes) {
             todo.push(Down(child))
           )
 
-        case Up(ast: ASTNode, memory) =>
-          memory.foreach(s => currentScope = s)
+        case Up(ast: ASTNode, maybeScope, maybeBindingMode) =>
+          maybeScope.foreach(s => currentScope = s)
+          maybeBindingMode.foreach(s => currentBindingMode = s)
       }
     }
   }
@@ -57,10 +60,19 @@ trait Move
 
 case class Down(data: AnyRef) extends Move
 
-case class Up(data: AnyRef, s: Option[Scope]) extends Move
+case class Up(data: AnyRef, s: Option[Scope], v: Option[BindingMode]) extends Move
 
 case class ScopingResult(changeCurrentScopeTo: Option[Scope], comingUpScope: Option[Scope])
 
 trait Scoping {
-  def scope(ast: ASTNode, incoming: Scope, scopes: Scopes): ScopingResult
+  def scope(ast: ASTNode, incoming: Scope): ScopingResult
 }
+
+trait VariableBinding {
+  def bind(ast: ASTNode, scope: Scope, bindingMode: BindingMode): BindingMode
+}
+
+// When visiting the tree, we need to sometimes remember if
+trait BindingMode
+case object BindingAllowed extends BindingMode
+case object ReferenceOnly extends BindingMode
