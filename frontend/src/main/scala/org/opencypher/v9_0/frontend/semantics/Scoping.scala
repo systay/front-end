@@ -31,105 +31,84 @@ import org.opencypher.v9_0.util.{ASTNode, InternalException}
   *
   * Objects of this class should not be re-used.
   */
-class Scoping extends TopDownVisitor[Scope] {
 
-  val readScope = new Scopes
-  val writeScope = new Scopes
+object Scoper extends Scoping {
 
-  private def setScopeTo(s: ASTNode, scope: Scope): Unit = {
-    readScope.set(s.id, scope)
-    writeScope.set(s.id, scope)
+  override def scope(ast: ASTNode, currentScope: Scope, scopes: Scopes): ScopingResult =
+    ast match {
+        // if we are dealing with ORDER BY and the bi-scope has already been defined.
+      case ast: ASTNode if scopes.contains(ast.id) =>
+        changeScopeForChildren(scopes.get(ast.id), currentScope)
+
+        // WITH or RETURN
+      case ast: ProjectionClause =>
+        val newScope = currentScope.popScope().createInnerScope()
+        ast.orderBy.foreach { orderBy =>
+          val newBiScope = new BiScope(newScope, currentScope)
+          scopes.set(orderBy.id, newBiScope)
+        }
+        scopes.set(ast.id, currentScope)
+        changeScopeForSiblings(newScope)
+
+      case ast: Foreach =>
+        createNewSubScope(ast, currentScope, scopes, ast.expression)
+
+      case ast: ScopeExpression =>
+        createNewSubScope(ast, currentScope, scopes)
+
+      case ast: Union =>
+        scopes.set(ast.query.id, currentScope.createInnerScope())
+        scopes.set(ast.part.id, currentScope.createInnerScope())
+        changeScopeForSiblings(currentScope)
+
+      case _ =>
+        scopes.set(ast.id, currentScope)
+        ScopingResult(None, None)
+    }
+
+  private def createNewSubScope(t: ASTNode, currentScope: Scope, scopes: Scopes, children: ASTNode*) = {
+    val childScope = currentScope.createInnerScope()
+    children.foreach(child => scopes.set(child.id, currentScope))
+    scopes.set(t.id, currentScope)
+    changeScopeForChildren(childScope, currentScope)
   }
 
-  def gogogo(ast: ASTNode) = {
-    TreeVisitor.visit(ast, new NormalScope(), this, BottomUpVisitor.empty)
-  }
-
-  override def visit(x: Any, scope: Scope): Scope = x match {
-    // If this node is already scoped, we can just return that
-    case x: ASTNode if readScope.contains(x.id) =>
-      readScope.get(x.id)
-
-    // WITH is a horizon between two scopes.
-    // It reads from one and writes to the other
-    case w: ProjectionClause =>
-      readScope.set(w.id, scope)
-      val newScope = new NormalScope()
-      writeScope.set(w.id, newScope)
-      w.orderBy.foreach { orderBy =>
-        // ORDER BY needs special handling. It can read from the scope before the WITH,
-        // but also from the scope which WITH writes. That is why we have
-        // this special scope construct for WITH
-        val weird = new BiScope(newScope, scope)
-        readScope.set(orderBy.id, weird)
-      }
-      newScope
-
-    case a: Foreach =>
-      readScope.set(a.id, scope)
-      readScope.set(a.expression.id, scope)
-      val newScope = scope.createInnerScope()
-      writeScope.set(a.id, newScope)
-      newScope
-
-    // This objects contains all the scoped parts of ALL/ANY/NONE/SINGLE
-    case a: ScopeExpression =>
-      val newScope = scope.createInnerScope()
-      writeScope.set(a.id, newScope)
-      newScope
-
-    case u: Union =>
-      val scope1 = scope.createInnerScope()
-      val scope2 = scope.createInnerScope()
-      setScopeTo(u.part, scope1)
-      setScopeTo(u.query, scope2)
-      scope1 // not really important, since we have already scoped all children
-
-    case a: Clause =>
-      readScope.set(a.id, scope)
-      writeScope.set(a.id, scope)
-      scope
-
-    case _: IterablePredicateExpression => ???
-
-    case e: Expression =>
-      readScope.set(e.id, scope)
-      scope
-
-    case _ => scope
-  }
+  private def changeScopeForChildren(children: Scope, pop: Scope) = ScopingResult(Some(children), Some(pop))
+  private def changeScopeForSiblings(scope: Scope) = ScopingResult(None, Some(scope))
 
 }
 
 object Scope {
-  val idGen = new SequentialIdGen()
+  val idGen = new SequentialIdGen
 }
 
 trait Scope {
-
   val id = Scope.idGen.id()
   def getVariable(name: String): Option[Variable]
   def createInnerScope(): Scope
   def addVariable(v: Variable): Unit
+  def popScope(): Scope
 }
 
 /**
   * This special scope is used for handling ORDER BY, which can read variables in two separate scopes
   */
-class BiScope(a: Scope, b: Scope) extends Scope {
+class BiScope(val firstScope: Scope, val secondScope: Scope) extends Scope {
   override def getVariable(name: String): Option[Variable] = {
-    val result = a.getVariable(name)
+    val result = firstScope.getVariable(name)
     if (result.nonEmpty)
       result
     else
-      b.getVariable(name)
+      secondScope.getVariable(name)
   }
 
   override def createInnerScope(): Scope = new NormalScope(Some(this))
 
+  override def toString = s"BiScope${id.x}($firstScope, $secondScope)"
+
   override def addVariable(v: Variable): Unit = throw new InternalException("can't add variables to a BiScope")
 
-  override def toString = s"BiScope$id($a, $b)"
+  override def popScope(): Scope = throw new InternalException("can't pop scope on a BiScope")
 }
 
 class NormalScope(parent: Option[Scope] = None, var locals: Set[Variable] = Set.empty) extends Scope {
@@ -152,7 +131,12 @@ class NormalScope(parent: Option[Scope] = None, var locals: Set[Variable] = Set.
 
   override def addVariable(v: Variable): Unit = locals += v
 
-  override def toString: String = s"Scope($id)"
+  override def toString: String = {
+    val parentS = parent.map(_.toString).getOrElse("")
+    s" Scope${id.x}($parentS)"
+  }
+
+  override def popScope(): Scope = parent.getOrElse(throw new InternalException("have no scope to pop at this location"))
 }
 
 class Scopes extends Attribute[Scope]
