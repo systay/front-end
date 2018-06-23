@@ -1,3 +1,18 @@
+/*
+ * Copyright © 2002-2018 Neo4j Sweden AB (http://neo4j.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.opencypher.v9_0.frontend.semantics
 
 import org.mockito.ArgumentMatchers._
@@ -12,16 +27,22 @@ class ScopingTest extends CypherFunSuite {
 
   val binder = mock[VariableBinder]
   when(binder.bind(any(), any(), any())).thenReturn(BindingAllowed)
+  val typeExpecting = mock[TypeExpecting]
+
+  private def parseAndAnalyse(q: String) = {
+    val scopes = new Scopes
+    val parser = new CypherParser(Attributes(new SequentialIdGen()))
+    val x = parser.parse(q)
+
+
+    new TreeWalker(new Scoper(scopes), binder, typeExpecting).visit(x.statement)
+    (scopes, x.statement)
+  }
 
   test("WITH creates sibling scopes") {
-    val parser = new CypherParser(Attributes(new SequentialIdGen()))
-    val x = parser.parse("MATCH (a) WITH a.prop as x RETURN *")
-    val scopes = new Scopes
-
-    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
-
-    val matchNode = x.statement.findByClass[Match]
-    val returnNode = x.statement.findByClass[Return]
+    val (scopes, statement) = parseAndAnalyse("MATCH (a) WITH a.prop as x RETURN *")
+    val matchNode = statement.findByClass[Match]
+    val returnNode = statement.findByClass[Return]
 
     val matchScope = scopes.get(matchNode.id)
     val returnScope = scopes.get(returnNode.id)
@@ -31,20 +52,16 @@ class ScopingTest extends CypherFunSuite {
   }
 
   test("ORDER BY lives in a special scope") {
-    val parser = new CypherParser(Attributes(new SequentialIdGen()))
+    val (scopes, statement) = parseAndAnalyse("MATCH (a) WITH a ORDER BY a.prop RETURN *")
 
-    val x = parser.parse("MATCH (a) WITH a ORDER BY a.prop RETURN *")
-    val scopes = new Scopes
 
-    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
-
-    val orderBy = x.statement.findByClass[OrderBy]
+    val orderBy = statement.findByClass[OrderBy]
     val orderByScope = scopes.get(orderBy.id)
 
     orderByScope shouldBe a[BiScope]
 
-    val matchNode = x.statement.findByClass[Match]
-    val returnNode = x.statement.findByClass[Return]
+    val matchNode = statement.findByClass[Match]
+    val returnNode = statement.findByClass[Return]
 
     val matchScope = scopes.get(matchNode.id)
     val returnScope = scopes.get(returnNode.id)
@@ -55,17 +72,14 @@ class ScopingTest extends CypherFunSuite {
   }
 
   test("FOREACH creates inner scopes for the updates") {
-    val parser = new CypherParser(Attributes(new SequentialIdGen()))
-    val x = parser.parse("CREATE (a) FOREACH(x in [1,2,3] | SET a.prop = x) REMOVE a.prop")
-    val scopes = new Scopes
+    val (scopes, statement) = parseAndAnalyse("CREATE (a) FOREACH(x in [1,2,3] | SET a.prop = x) REMOVE a.prop")
 
-    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
 
-    val create = x.statement.findByClass[Create]
-    val set = x.statement.findByClass[SetClause]
-    val literalList = x.statement.findByClass[ListLiteral]
-    val foreach = x.statement.findByClass[Foreach]
-    val delete = x.statement.findByClass[Remove]
+    val create = statement.findByClass[Create]
+    val set = statement.findByClass[SetClause]
+    val literalList = statement.findByClass[ListLiteral]
+    val foreach = statement.findByClass[Foreach]
+    val delete = statement.findByClass[Remove]
 
     val createScope = scopes.get(create.id)
     val setScope = scopes.get(set.id)
@@ -80,15 +94,11 @@ class ScopingTest extends CypherFunSuite {
   }
 
   test("ListComprehension") {
-    val parser = new CypherParser(Attributes(new SequentialIdGen()))
-    val x = parser.parse("RETURN [ x in $param | x + 12 ]")
-    val scopes = new Scopes
+    val (scopes, statement) = parseAndAnalyse("RETURN [ x in $param | x + 12 ]")
 
-    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
-
-    val returnClass = x.statement.findByClass[Return]
-    val listComp = x.statement.findByClass[ListComprehension]
-    val add = x.statement.findByClass[Add]
+    val returnClass = statement.findByClass[Return]
+    val listComp = statement.findByClass[ListComprehension]
+    val add = statement.findByClass[Add]
 
     val returnClassScope = scopes.get(returnClass.id)
     val listCompScope = scopes.get(listComp.id)
@@ -99,16 +109,12 @@ class ScopingTest extends CypherFunSuite {
   }
 
   test("PatternComprehension") {
-    val parser = new CypherParser(Attributes(new SequentialIdGen()))
-    val x = parser.parse("MATCH (a: Person) RETURN [ (a)-[:FRIEND]->(b) | b.name ]")
-    val scopes = new Scopes
+    val (scopes, statement) = parseAndAnalyse("MATCH (a: Person) RETURN [ (a)-[:FRIEND]->(b) | b.name ]")
 
-    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
-
-    val returnClass = x.statement.findByClass[Return]
-    val pattComp = x.statement.findByClass[PatternComprehension]
-    val relPattern = x.statement.findByClass[RelationshipsPattern]
-    val projection = x.statement.findByClass[Property]
+    val returnClass = statement.findByClass[Return]
+    val pattComp = statement.findByClass[PatternComprehension]
+    val relPattern = statement.findByClass[RelationshipsPattern]
+    val projection = statement.findByClass[Property]
 
     val returnClassScope = scopes.get(returnClass.id)
     val pattCompScope = scopes.get(pattComp.id)
@@ -120,14 +126,10 @@ class ScopingTest extends CypherFunSuite {
   }
 
   test("UNION") {
-    val parser = new CypherParser(Attributes(new SequentialIdGen()))
-    val x = parser.parse("RETURN 1 as X UNION RETURN '1' AS X")
-    val scopes = new Scopes
+    val (scopes, statement) = parseAndAnalyse("RETURN 1 as X UNION RETURN '1' AS X")
 
-    new TreeWalker(new Scoper(scopes), binder).visit(x.statement)
-
-    val integer = x.statement.findByClass[SignedIntegerLiteral]
-    val string = x.statement.findByClass[StringLiteral]
+    val integer = statement.findByClass[SignedIntegerLiteral]
+    val string = statement.findByClass[StringLiteral]
 
     val intScope = scopes.get(integer.id)
     val strScope = scopes.get(string.id)

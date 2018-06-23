@@ -45,7 +45,7 @@ object SemanticExpressionCheck extends SemanticAnalysisTooling {
 
         // ARITHMETICS
 
-      case x:Add =>
+      case x:Add => // RETURN "a" + 42
         check(ctx, x.lhs) chain
           expectType(TypeSpec.all, x.lhs) chain
           check(ctx, x.rhs) chain

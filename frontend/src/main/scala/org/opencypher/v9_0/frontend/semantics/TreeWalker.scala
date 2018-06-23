@@ -24,7 +24,9 @@ import scala.collection.mutable
 This class is responsible for walking the AST tree and knowing how to stitch together the different
 parts of semantic analysis together.
  */
-class TreeWalker(scoping: Scoping, variableBinding: VariableBinding) {
+class TreeWalker(scoping: Scoping,
+                 variableBinding: VariableBinding,
+                 typeExpecting: TypeExpecting) {
   def visit(astRoot: ASTNode): Unit = {
     val todo = new mutable.ArrayStack[Move]()
     todo.push(Down(astRoot))
@@ -40,6 +42,7 @@ class TreeWalker(scoping: Scoping, variableBinding: VariableBinding) {
       scopingResult.changeCurrentScopeTo.foreach { s =>
         currentScope = s
       }
+      typeExpecting.visit(ast)
     }
 
 
@@ -85,11 +88,14 @@ trait VariableBinding {
   def bind(ast: ASTNode, scope: Scope, bindingMode: BindingMode): BindingMode
 }
 
+trait TypeExpecting {
+  def visit(ast: ASTNode): Unit
+}
+
+
+
 // When visiting the tree, we need to sometimes remember if
 trait BindingMode
-
 case object BindingAllowed extends BindingMode
-
 case object ReferenceOnly extends BindingMode
-
 case object RelationshipBindingOnly extends BindingMode
