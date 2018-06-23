@@ -20,6 +20,10 @@ import org.opencypher.v9_0.util.Foldable._
 
 import scala.collection.mutable
 
+/*
+This class is responsible for walking the AST tree and knowing how to stitch together the different
+parts of semantic analysis together.
+ */
 class TreeWalker(scoping: Scoping, variableBinding: VariableBinding) {
   def visit(astRoot: ASTNode): Unit = {
     val todo = new mutable.ArrayStack[Move]()
@@ -29,38 +33,47 @@ class TreeWalker(scoping: Scoping, variableBinding: VariableBinding) {
     var currentScope = scopeForEntireQuery.createInnerScope()
     var currentBindingMode: BindingMode = ReferenceOnly
 
+    def doSemanticAnalysis(ast: ASTNode): Unit = {
+      val scopingResult = scoping.scope(ast, currentScope)
+      todo.push(Up(ast, scopingResult.comingUpScope, currentBindingMode))
+      currentBindingMode = variableBinding.bind(ast, currentScope, currentBindingMode)
+      scopingResult.changeCurrentScopeTo.foreach { s =>
+        currentScope = s
+      }
+    }
+
+
     while (todo.nonEmpty) {
       val currentNode = todo.pop()
 
       currentNode match {
-        case Down(ast: ASTNode) =>
-          val scopingResult = scoping.scope(ast, currentScope)
-          todo.push(Up(ast, scopingResult.comingUpScope, Some(currentBindingMode)))
-          currentBindingMode = variableBinding.bind(ast, currentScope, currentBindingMode)
+        case Down(obj) =>
+          obj match {
+            case node: ASTNode => doSemanticAnalysis(node)
+            case _ =>
+          }
 
-          scopingResult.changeCurrentScopeTo.foreach(s => currentScope = s)
-          ast.reverseChildren.foreach(child =>
+          obj.reverseChildren.foreach { child =>
             todo.push(Down(child))
-          )
+          }
 
-        case Down(ast) =>
-          ast.reverseChildren.foreach(child =>
-            todo.push(Down(child))
-          )
 
-        case Up(ast: ASTNode, maybeScope, maybeBindingMode) =>
-          maybeScope.foreach(s => currentScope = s)
-          maybeBindingMode.foreach(s => currentBindingMode = s)
+        case Up(_, maybeScope, bindingMode) =>
+          maybeScope.foreach { s =>
+            currentScope = s
+          }
+          currentBindingMode = bindingMode
       }
     }
   }
+
+
 }
 
 trait Move
-
 case class Down(data: AnyRef) extends Move
+case class Up(data: ASTNode, s: Option[Scope], v: BindingMode) extends Move
 
-case class Up(data: AnyRef, s: Option[Scope], v: Option[BindingMode]) extends Move
 
 case class ScopingResult(changeCurrentScopeTo: Option[Scope], comingUpScope: Option[Scope])
 
@@ -74,5 +87,9 @@ trait VariableBinding {
 
 // When visiting the tree, we need to sometimes remember if
 trait BindingMode
+
 case object BindingAllowed extends BindingMode
+
 case object ReferenceOnly extends BindingMode
+
+case object RelationshipBindingOnly extends BindingMode

@@ -84,9 +84,9 @@ object Scope {
 
 trait Scope {
   val id = Scope.idGen.id()
-  def getVariable(name: String): Option[Variable]
+  def getVariable(name: String): Option[LogicalVariable]
   def createInnerScope(): Scope
-  def addVariable(v: Variable): Unit
+  def addVariable(v: LogicalVariable): Unit
   def popScope(): Scope
 }
 
@@ -94,7 +94,7 @@ trait Scope {
   * This special scope is used for handling ORDER BY, which can read variables in two separate scopes
   */
 class BiScope(val firstScope: Scope, val secondScope: Scope) extends Scope {
-  override def getVariable(name: String): Option[Variable] = {
+  override def getVariable(name: String): Option[LogicalVariable] = {
     val result = firstScope.getVariable(name)
     if (result.nonEmpty)
       result
@@ -106,19 +106,19 @@ class BiScope(val firstScope: Scope, val secondScope: Scope) extends Scope {
 
   override def toString = s"BiScope${id.x}($firstScope, $secondScope)"
 
-  override def addVariable(v: Variable): Unit = throw new InternalException("can't add variables to a BiScope")
+  override def addVariable(v: LogicalVariable): Unit = throw new InternalException("can't add variables to a BiScope")
 
   override def popScope(): Scope = throw new InternalException("can't pop scope on a BiScope")
 }
 
-class NormalScope(parent: Option[Scope] = None, var locals: Set[Variable] = Set.empty) extends Scope {
+class NormalScope(parent: Option[Scope] = None, var locals: Set[LogicalVariable] = Set.empty) extends Scope {
 
   override def createInnerScope(): Scope = {
     new NormalScope(Some(this))
   }
 
-  override def getVariable(name: String): Option[Variable] = {
-    val local: Option[Variable] = locals.collectFirst {
+  override def getVariable(name: String): Option[LogicalVariable] = {
+    val local: Option[LogicalVariable] = locals.collectFirst {
       case v if v.name == name => v
     }
 
@@ -129,7 +129,7 @@ class NormalScope(parent: Option[Scope] = None, var locals: Set[Variable] = Set.
     }
   }
 
-  override def addVariable(v: Variable): Unit = locals += v
+  override def addVariable(v: LogicalVariable): Unit = locals += v
 
   override def toString: String = {
     val parentS = parent.map(_.toString).getOrElse("")
