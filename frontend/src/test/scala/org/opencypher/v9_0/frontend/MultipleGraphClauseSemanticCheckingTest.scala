@@ -18,8 +18,9 @@ package org.opencypher.v9_0.frontend
 import org.opencypher.v9_0.ast.semantics.{SemanticCheckResult, SemanticErrorDef, SemanticFeature, SemanticState, SemanticTable}
 import org.opencypher.v9_0.ast.{AstConstructionTestSupport, Query}
 import org.opencypher.v9_0.frontend.phases._
+import org.opencypher.v9_0.frontend.semantics.{TypeExpectations, VariableBindings}
 import org.opencypher.v9_0.parser.ParserTest
-import org.opencypher.v9_0.util.attribution.{Attributes, IdGen, SequentialIdGen}
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
 import org.opencypher.v9_0.util.spi.MapToPublicExceptions
 import org.opencypher.v9_0.util.symbols.CypherType
 import org.opencypher.v9_0.util.{CypherException, InputPosition, InputPositions}
@@ -403,7 +404,7 @@ class MultipleGraphClauseSemanticCheckingTest
   }
 
   override def convert(astNode: ast.Statement): SemanticCheckResult = {
-    val rewritten = PreparatoryRewriting(Attributes(new SequentialIdGen())).transform(TestState(Some(astNode)), TestContext).statement()
+    val rewritten = PreparatoryRewriting.transform(TestState(Some(astNode)), TestContext).statement()
     val initialState = SemanticState.clean.withFeatures(SemanticFeature.MultipleGraphs, SemanticFeature.WithInitialQuerySignature)
     rewritten.semanticCheck(initialState)
   }
@@ -452,6 +453,14 @@ class MultipleGraphClauseSemanticCheckingTest
     override def withPositions(p: InputPositions): BaseState = ???
 
     override def initialFields: Map[String, CypherType] = Map.empty
+
+    override def maybeBindings: Option[VariableBindings] = ???
+
+    override def maybeTypeExpectations: Option[TypeExpectations] = ???
+
+    override def withBindings(s: VariableBindings): BaseState = ???
+
+    override def withTypeExpectations(s: TypeExpectations): BaseState = ???
   }
 
   //noinspection TypeAnnotation

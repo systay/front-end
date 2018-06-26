@@ -30,6 +30,18 @@ trait Attribute[T] {
     array(id.x).value = t
   }
 
+  def optionalGet(id: Id): Option[T] = {
+    if (array.size <= id.x)
+      None
+    else {
+      val values = array(id.x)
+      if (values.hasValue)
+        Some(values.value)
+      else
+        None
+    }
+  }
+
   def get(id: Id): T = {
     array(id.x).value
   }
@@ -69,7 +81,7 @@ trait Attribute[T] {
       }
     }
 
-    override def hasNext = {
+    override def hasNext: Boolean = {
       if (currentId >= array.size)
         false
       else {
@@ -80,7 +92,7 @@ trait Attribute[T] {
       }
     }
 
-    override def next() = {
+    override def next(): (Id, T) = {
       if (hasNext) {
         val res = nextTup
         nextTup = null
@@ -91,7 +103,7 @@ trait Attribute[T] {
     }
   }
 
-  def size = iterator.size
+  def size: Int = iterator.size
 
   def apply(id: Id): T = get(id)
 
@@ -111,7 +123,7 @@ trait Attribute[T] {
     }
   }
 
-  override def toString(): String = {
+  override def toString: String = {
     val sb = new StringBuilder
     sb ++= this.getClass.getSimpleName + "\n"
     for (i <- array.indices)

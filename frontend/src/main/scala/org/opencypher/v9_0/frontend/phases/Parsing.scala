@@ -18,13 +18,11 @@ package org.opencypher.v9_0.frontend.phases
 import org.opencypher.v9_0.ast.Statement
 import org.opencypher.v9_0.frontend.phases.CompilationPhaseTracer.CompilationPhase.PARSING
 import org.opencypher.v9_0.parser.CypherParser
-import org.opencypher.v9_0.util.attribution.Attributes
 
-case class Parsing(attributes: Attributes) extends Phase[BaseContext, BaseState, BaseState] {
-  private val parser = new CypherParser(attributes)
+case object Parsing extends Phase[BaseContext, BaseState, BaseState] {
 
-  override def process(in: BaseState, ignored: BaseContext): BaseState = {
-    val parseResult = parser.parse(in.queryText, in.startPosition)
+  override def process(in: BaseState, ctx: BaseContext): BaseState = {
+    val parseResult = CypherParser.parse(in.queryText, ctx.astIdGen, in.startPosition)
     in.
       withStatement(parseResult.statement).
       withPositions(parseResult.positions)

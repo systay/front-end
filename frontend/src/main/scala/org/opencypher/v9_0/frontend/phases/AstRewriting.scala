@@ -23,13 +23,13 @@ import org.opencypher.v9_0.rewriting.rewriters.LiteralExtraction
 import org.opencypher.v9_0.util.attribution.Attributes
 
 case class AstRewriting(sequencer: String => RewriterStepSequencer, literalExtraction: LiteralExtraction,
-                        getDegreeRewriting: Boolean = true,// This does not really belong in the front end. Should move to a planner rewriter
-                       attributes: Attributes
+                        getDegreeRewriting: Boolean = true// This does not really belong in the front end. Should move to a planner rewriter
 ) extends Phase[BaseContext, BaseState, BaseState] {
 
   private val astRewriter = new ASTRewriter(sequencer, literalExtraction, getDegreeRewriting)
 
   override def process(in: BaseState, context: BaseContext): BaseState = {
+    val attributes = Attributes(context.astIdGen, in.positions())
 
     val (rewrittenStatement, extractedParams, _) = astRewriter.rewrite(in.queryText, in.statement(), in.semantics(), attributes)
 

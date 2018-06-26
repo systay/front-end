@@ -32,16 +32,15 @@ import org.opencypher.v9_0.expressions.{Add, DecimalDoubleLiteral, SignedInteger
  * limitations under the License.
  */
 import org.opencypher.v9_0.util.InputPosition
-import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class ParseWithPositionsTest extends CypherFunSuite {
   test("we are able to see positions") {
     import org.opencypher.v9_0.util.Foldable._
-    val parser = new CypherParser(Attributes(new SequentialIdGen()))
            //01234567890123456
     val q = "RETURN 1.2 + 2"
-    val result = parser.parse(q, None)
+    val result = CypherParser.parse(q, new SequentialIdGen(), None)
     val positions = result.positions
     val ast = result.statement
     positions.get(ast.findByClass[Add].id) should equal(InputPosition(14, 1, 15))

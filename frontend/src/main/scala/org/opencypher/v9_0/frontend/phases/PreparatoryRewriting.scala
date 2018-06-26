@@ -20,9 +20,10 @@ import org.opencypher.v9_0.rewriting.rewriters._
 import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.inSequence
 
-case class PreparatoryRewriting(attributes: Attributes) extends Phase[BaseContext, BaseState, BaseState] {
+case object PreparatoryRewriting extends Phase[BaseContext, BaseState, BaseState] {
 
   override def process(from: BaseState, context: BaseContext): BaseState = {
+    val attributes = Attributes(context.astIdGen, from.positions())
 
     val rewrittenStatement = from.statement().endoRewrite(inSequence(
       normalizeReturnClauses(context.exceptionCreator, attributes),

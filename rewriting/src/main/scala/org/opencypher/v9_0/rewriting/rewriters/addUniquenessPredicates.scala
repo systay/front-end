@@ -77,26 +77,26 @@ case class addUniquenessPredicates(attributes: Attributes) extends Rewriter {
     createPredicatesFor(uniqueRels, clause).reduceOption(expressions.And(_, _)(clause.position)(attributes.copy(clause.id)))
   }
 
-  def createPredicatesFor(uniqueRels: Seq[UniqueRel], clause: Clause): Seq[Expression] =
+  def createPredicatesFor(uniqueRels: Seq[UniqueRel], astNode: ASTNode): Seq[Expression] =
     for {
       x <- uniqueRels
       y <- uniqueRels if x.name < y.name && !x.isAlwaysDifferentFrom(y)
     } yield {
-      val equals = Equals(x.variable.copyId, y.variable.copyId)(clause.position)(attributes.copy(clause.id))
+      val equals = Equals(x.variable.copyId, y.variable.copyId)(astNode.position)(attributes.copy(astNode.id))
 
       (x.singleLength, y.singleLength) match {
         case (true, true) =>
-          Not(equals)(clause.position)(attributes.copy(clause.id))
+          Not(equals)(astNode.position)(attributes.copy(astNode.id))
 
         case (true, false) =>
-          NoneIterablePredicate(y.variable.copyId, y.variable.copyId, Some(equals))(clause.position)(attributes.copy(clause.id))
+          NoneIterablePredicate(y.variable.copyId, y.variable.copyId, Some(equals))(astNode.position)(attributes.copy(astNode.id))
 
         case (false, true) =>
-          NoneIterablePredicate(x.variable.copyId, x.variable.copyId, Some(equals))(clause.position)(attributes.copy(clause.id))
+          NoneIterablePredicate(x.variable.copyId, x.variable.copyId, Some(equals))(astNode.position)(attributes.copy(astNode.id))
 
         case (false, false) =>
-          val anyIterablePredicate = AnyIterablePredicate(y.variable.copyId, y.variable.copyId, Some(equals))(clause.position)(attributes.copy(clause.id))
-          NoneIterablePredicate(x.variable.copyId, x.variable.copyId, Some(anyIterablePredicate))(clause.position)(attributes.copy(clause.id))
+          val anyIterablePredicate = AnyIterablePredicate(y.variable.copyId, y.variable.copyId, Some(equals))(astNode.position)(attributes.copy(astNode.id))
+          NoneIterablePredicate(x.variable.copyId, x.variable.copyId, Some(anyIterablePredicate))(astNode.position)(attributes.copy(astNode.id))
       }
     }
 

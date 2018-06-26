@@ -17,13 +17,16 @@ package org.opencypher.v9_0.frontend.phases.rewriting
 
 import org.mockito.ArgumentMatchers._
 import org.mockito.Mockito._
-import org.opencypher.v9_0.ast.semantics.SemanticErrorDef
-import org.opencypher.v9_0.frontend.phases._
-import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
-import org.opencypher.v9_0.util.{CypherException, InputPosition, Rewriter}
-import org.opencypher.v9_0.frontend.phases.{CNFNormalizer, CompilationPhaseTracer, InternalNotificationLogger, Monitors}
+import org.opencypher.v9_0.ast.Statement
+import org.opencypher.v9_0.ast.semantics.{SemanticErrorDef, SemanticState, SemanticTable}
+import org.opencypher.v9_0.frontend.phases.{CNFNormalizer, CompilationPhaseTracer, InternalNotificationLogger, Monitors, _}
+import org.opencypher.v9_0.frontend.semantics.{TypeExpectations, VariableBindings}
+import org.opencypher.v9_0.frontend.{NoPlannerName, PlannerName}
 import org.opencypher.v9_0.rewriting.{AstRewritingMonitor, PredicateTestSupport}
-import org.opencypher.v9_0.util.attribution.{Attributes, IdGen, SequentialIdGen}
+import org.opencypher.v9_0.util.attribution.{IdGen, SequentialIdGen}
+import org.opencypher.v9_0.util.symbols.CypherType
+import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
+import org.opencypher.v9_0.util.{CypherException, InputPosition, InputPositions, Rewriter}
 import org.scalatest.mock.MockitoSugar
 
 class CNFNormalizerTest extends CypherFunSuite with PredicateTestSupport {
@@ -118,7 +121,7 @@ class CNFNormalizerTest extends CypherFunSuite with PredicateTestSupport {
     val monitors = mock[Monitors]
     astRewritingMonitor = mock[AstRewritingMonitor]
     when(monitors.newMonitor[AstRewritingMonitor]()).thenReturn(astRewritingMonitor)
-    rewriter = CNFNormalizer(Attributes(new SequentialIdGen())).instance(new TestContext(monitors))
+    rewriter = CNFNormalizer.instance(InitialState("query", None, NoPlannerName), new TestContext(monitors))
   }
 }
 
@@ -138,4 +141,44 @@ class TestContext(override val monitors: Monitors) extends BaseContext {
   override def errorHandler: Seq[SemanticErrorDef] => Unit = ???
 
   override val astIdGen: IdGen = new SequentialIdGen()
+}
+
+case class TestState() extends BaseState {
+  override def queryText: String = ???
+
+  override def startPosition: Option[InputPosition] = ???
+
+  override def plannerName: PlannerName = ???
+
+  override def initialFields: Map[String, CypherType] = ???
+
+  override def maybeStatement: Option[Statement] = ???
+
+  override def maybeSemantics: Option[SemanticState] = ???
+
+  override def maybeExtractedParams: Option[Map[String, Any]] = ???
+
+  override def maybeSemanticTable: Option[SemanticTable] = ???
+
+  override def maybePositions: Option[InputPositions] = ???
+
+  override def accumulatedConditions: Set[Condition] = ???
+
+  override def withStatement(s: Statement): BaseState = ???
+
+  override def withSemanticTable(s: SemanticTable): BaseState = ???
+
+  override def withSemanticState(s: SemanticState): BaseState = ???
+
+  override def withParams(p: Map[String, Any]): BaseState = ???
+
+  override def withPositions(p: InputPositions): BaseState = ???
+
+  override def maybeBindings: Option[VariableBindings] = ???
+
+  override def maybeTypeExpectations: Option[TypeExpectations] = ???
+
+  override def withBindings(s: VariableBindings): BaseState = ???
+
+  override def withTypeExpectations(s: TypeExpectations): BaseState = ???
 }

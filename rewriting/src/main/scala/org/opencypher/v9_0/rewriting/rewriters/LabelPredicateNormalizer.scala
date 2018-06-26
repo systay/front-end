@@ -18,12 +18,18 @@ package org.opencypher.v9_0.rewriting.rewriters
 import org.opencypher.v9_0.expressions.{Expression, HasLabels, NodePattern}
 import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 
+// Rewriter that moves labels from the MATCH pattern to where predicates
+// MATCH (a:A:B:C) => MATCH (a) WHERE a:A and a:B and a:C
 case class LabelPredicateNormalizer(attributes: Attributes) extends MatchPredicateNormalizer {
   override val extract: PartialFunction[AnyRef, IndexedSeq[Expression]] = {
-    case p@NodePattern(Some(id), labels, _, _) if labels.nonEmpty => Vector(HasLabels(id.copyId, labels)(p.position)(attributes.copy(p.id)))
+    case p@NodePattern(Some(id), labels, _, _) if labels.nonEmpty =>
+      labels.map {
+        l => HasLabels(id.copyId, labels)(p.position)(attributes.copy(p.id))
+      }.toIndexedSeq
   }
 
   override val replace: PartialFunction[AnyRef, AnyRef] = {
-    case p@NodePattern(Some(id), labels, _, _) if labels.nonEmpty => p.copy(variable = Some(id.copyId), labels = Seq.empty)(p.position)(SameId(p.id))
+    case p@NodePattern(Some(id), labels, _, _) if labels.nonEmpty =>
+      p.copy(variable = Some(id.copyId), labels = Seq.empty)(p.position)(SameId(p.id))
   }
 }

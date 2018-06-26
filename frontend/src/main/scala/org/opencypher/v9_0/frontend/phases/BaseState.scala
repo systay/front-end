@@ -18,6 +18,7 @@ package org.opencypher.v9_0.frontend.phases
 import org.opencypher.v9_0.ast.semantics.{SemanticState, SemanticTable}
 import org.opencypher.v9_0.ast.{Query, Statement}
 import org.opencypher.v9_0.frontend.PlannerName
+import org.opencypher.v9_0.frontend.semantics.{TypeExpectations, VariableBindings}
 import org.opencypher.v9_0.util.symbols.CypherType
 import org.opencypher.v9_0.util.{InputPosition, InputPositions, InternalException}
 
@@ -31,6 +32,8 @@ trait BaseState {
   def maybeExtractedParams: Option[Map[String, Any]]
   def maybeSemanticTable: Option[SemanticTable]
   def maybePositions: Option[InputPositions]
+  def maybeBindings: Option[VariableBindings]
+  def maybeTypeExpectations: Option[TypeExpectations]
 
   def accumulatedConditions: Set[Condition]
 
@@ -45,6 +48,11 @@ trait BaseState {
   def extractedParams(): Map[String, Any] = maybeExtractedParams getOrElse fail("Extracted parameters")
   def semanticTable(): SemanticTable = maybeSemanticTable getOrElse fail("Semantic table")
 
+  // SEMANTIC STATE
+  def variableBindings(): VariableBindings = maybeBindings getOrElse fail("Variable Bindings")
+  def typeExpectations(): TypeExpectations = maybeTypeExpectations getOrElse fail("Type Expectations")
+
+
   protected def fail(what: String) = {
     throw new InternalException(s"$what not yet initialised")
   }
@@ -52,20 +60,24 @@ trait BaseState {
   def withStatement(s: Statement): BaseState
   def withSemanticTable(s: SemanticTable): BaseState
   def withSemanticState(s: SemanticState): BaseState
+  def withBindings(s: VariableBindings): BaseState
+  def withTypeExpectations(s: TypeExpectations): BaseState
   def withParams(p: Map[String, Any]): BaseState
   def withPositions(p: InputPositions): BaseState
 }
 
 case class InitialState(queryText: String,
-  startPosition: Option[InputPosition],
-  plannerName: PlannerName,
-  initialFields: Map[String, CypherType] = Map.empty,
-  maybeStatement: Option[Statement] = None,
-  maybePositions: Option[InputPositions] = None,
-  maybeSemantics: Option[SemanticState] = None,
-  maybeExtractedParams: Option[Map[String, Any]] = None,
-  maybeSemanticTable: Option[SemanticTable] = None,
-  accumulatedConditions: Set[Condition] = Set.empty) extends BaseState {
+                        startPosition: Option[InputPosition],
+                        plannerName: PlannerName,
+                        initialFields: Map[String, CypherType] = Map.empty,
+                        maybeStatement: Option[Statement] = None,
+                        maybePositions: Option[InputPositions] = None,
+                        maybeSemantics: Option[SemanticState] = None,
+                        maybeExtractedParams: Option[Map[String, Any]] = None,
+                        maybeSemanticTable: Option[SemanticTable] = None,
+                        maybeBindings: Option[VariableBindings] = None,
+                        maybeTypeExpectations: Option[TypeExpectations] = None,
+                        accumulatedConditions: Set[Condition] = Set.empty) extends BaseState {
 
   override def withStatement(s: Statement): InitialState = copy(maybeStatement = Some(s))
 
@@ -74,6 +86,10 @@ case class InitialState(queryText: String,
   override def withSemanticTable(s: SemanticTable): InitialState = copy(maybeSemanticTable = Some(s))
 
   override def withSemanticState(s: SemanticState): InitialState = copy(maybeSemantics = Some(s))
+
+  override def withBindings(s: VariableBindings): InitialState = copy(maybeBindings = Some(s))
+
+  override def withTypeExpectations(s: TypeExpectations): InitialState = copy(maybeTypeExpectations = Some(s))
 
   override def withParams(p: Map[String, Any]): InitialState = copy(maybeExtractedParams = Some(p))
 }

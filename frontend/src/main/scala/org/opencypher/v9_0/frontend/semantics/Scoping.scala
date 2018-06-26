@@ -48,6 +48,11 @@ class Scoper(scopes: Scopes) extends Scoping {
           scopes.set(orderBy.id, newBiScope)
         }
         scopes.set(ast.id, currentScope)
+        ast.returnItems.items.foreach {
+          case AliasedReturnItem(_, variable) =>
+            scopes.set(variable.id, newScope)
+          case _ =>
+        }
         changeScopeForSiblings(newScope)
 
       case ast: Foreach =>
@@ -129,7 +134,11 @@ class NormalScope(parent: Option[Scope] = None, var locals: Set[LogicalVariable]
     }
   }
 
-  override def addVariable(v: LogicalVariable): Unit = locals += v
+  override def addVariable(newVar: LogicalVariable): Unit = {
+    if(locals.exists(v => v.name == newVar.name))
+      throw new VariableAlreadyDeclaredInScopeException(newVar)
+    locals += newVar
+  }
 
   override def toString: String = {
     val parentS = parent.map(_.toString).getOrElse("")

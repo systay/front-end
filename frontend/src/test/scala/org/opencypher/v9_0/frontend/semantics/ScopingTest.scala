@@ -20,35 +20,40 @@ import org.mockito.Mockito._
 import org.opencypher.v9_0.ast._
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.parser.CypherParser
-import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class ScopingTest extends CypherFunSuite {
 
   val binder = mock[VariableBinder]
-  when(binder.bind(any(), any(), any())).thenReturn(BindingAllowed)
+  when(binder.bind(any(), any())).thenReturn(BindingAllowed(false))
   val typeExpecting = mock[TypeExpecting]
+  val typer = mock[BottomUpVisitor]
 
   private def parseAndAnalyse(q: String) = {
     val scopes = new Scopes
-    val parser = new CypherParser(Attributes(new SequentialIdGen()))
-    val x = parser.parse(q)
+    val x = CypherParser.parse(q, new SequentialIdGen())
 
-
-    new TreeWalker(new Scoper(scopes), binder, typeExpecting).visit(x.statement)
+    new TreeWalker(new Scoper(scopes), binder, typeExpecting, typer).visit(x.statement)
     (scopes, x.statement)
   }
 
   test("WITH creates sibling scopes") {
     val (scopes, statement) = parseAndAnalyse("MATCH (a) WITH a.prop as x RETURN *")
-    val matchNode = statement.findByClass[Match]
-    val returnNode = statement.findByClass[Return]
+    val matchNode = statement.findByClass[Match].id
+    val returnNode = statement.findByClass[Return].id
+    val withExp = statement.findByClass[AliasedReturnItem].expression.id
+    val withAlias = statement.findByClass[AliasedReturnItem].alias.get.id
 
-    val matchScope = scopes.get(matchNode.id)
-    val returnScope = scopes.get(returnNode.id)
+    val matchScope = scopes.get(matchNode)
+    val returnScope = scopes.get(returnNode)
+    val withExpScope = scopes.get(withExp)
+    val withAliasScope = scopes.get(withAlias)
 
     matchScope should not equal returnScope
     matchScope.popScope() should equal(returnScope.popScope())
+    withExpScope should equal(matchScope)
+    withAliasScope should equal(returnScope)
   }
 
   test("ORDER BY lives in a special scope") {

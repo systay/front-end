@@ -15,21 +15,22 @@
  */
 package org.opencypher.v9_0.frontend.semantics
 
+import org.opencypher.v9_0.ast.Statement
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.frontend.semantics.Types._
 import org.opencypher.v9_0.parser.CypherParser
-import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class TypeExpectationsTest extends CypherFunSuite {
 
-  def parseAndAnalyse(q: String) = {
-    val parser = new CypherParser(Attributes(new SequentialIdGen()))
-    val x = parser.parse(q)
+  def parseAndAnalyse(q: String): (TypeExpectations, Statement) = {
+    val x = CypherParser.parse(q, new SequentialIdGen())
     val scopes = new Scopes
     val bindings = new VariableBindings
     val expectations = new TypeExpectations
-    new TreeWalker(new Scoper(scopes), new VariableBinder(bindings), new TypeExpectationsGenerator(expectations)).visit(x.statement)
+    val typer = new TypeExpectationsGenerator(expectations, new TypeJudgements)
+    new TreeWalker(new Scoper(scopes), new VariableBinder(bindings, scopes), typer, mock[BottomUpVisitor]).visit(x.statement)
     (expectations, x.statement)
   }
 
@@ -37,7 +38,7 @@ class TypeExpectationsTest extends CypherFunSuite {
     val (expectations, statement) = parseAndAnalyse("MATCH (a) RETURN a")
 
     val declarationId = statement.findByClass[NodePattern].variable.get.id
-    expectations.get(declarationId) should equal(TypeInfo(Set(NodeType), nullable = true))
+    expectations.get(declarationId) should equal(NonNullableType(NodeType))
   }
 
   test("WHERE expected predicates") {
@@ -45,7 +46,7 @@ class TypeExpectationsTest extends CypherFunSuite {
 
     val property = statement.findByClass[Property]
     val propId = property.id
-    expectations.get(propId) should equal(TypeInfo(Set(BoolType), nullable = true))
+    expectations.get(propId) should equal(NullableType(BoolType))
     expectations.get(property.map.id) should equal(NullableType(NodeType, RelationshipType, TimeType, DateType, MapType.MapOfUnknown))
   }
 

@@ -20,12 +20,13 @@ import org.opencypher.v9_0.rewriting.rewriters._
 import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.{Rewriter, inSequence}
 
-case class CNFNormalizer(attributes: Attributes) extends StatementRewriter {
+case object CNFNormalizer extends StatementRewriter {
 
   override def description: String = "normalize boolean predicates into conjunctive normal form"
 
-  override def instance(context: BaseContext): Rewriter = {
+  override def instance(in: BaseState, context: BaseContext): Rewriter = {
     implicit val monitor = context.monitors.newMonitor[AstRewritingMonitor]()
+    val attributes = Attributes(context.astIdGen, in.positions())
     inSequence(
       deMorganRewriter(attributes),
       distributeLawsRewriter(attributes),

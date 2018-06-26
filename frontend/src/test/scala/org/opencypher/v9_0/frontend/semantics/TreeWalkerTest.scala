@@ -19,7 +19,7 @@ import org.opencypher.v9_0.ast._
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.parser.CypherParser
 import org.opencypher.v9_0.util.ASTNode
-import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class TreeWalkerTest extends CypherFunSuite {
@@ -34,9 +34,8 @@ class TreeWalkerTest extends CypherFunSuite {
       }
     }
 
-    val parser = new CypherParser(Attributes(new SequentialIdGen()))
-    val x = parser.parse("MATCH (a) WITH a.prop as x ORDER BY a.foo, x RETURN *")
-    new TreeWalker(scoping, binder, mock[TypeExpecting]).visit(x.statement)
+    val x = CypherParser.parse("MATCH (a) WITH a.prop as x ORDER BY a.foo, x RETURN *", new SequentialIdGen())
+    new TreeWalker(scoping, binder, mock[TypeExpecting], mock[BottomUpVisitor]).visit(x.statement)
 
 
     // These are the nodes in the order they are seen going down

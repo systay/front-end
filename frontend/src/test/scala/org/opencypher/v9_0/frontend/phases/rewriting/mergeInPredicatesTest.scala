@@ -88,7 +88,7 @@ class mergeInPredicatesTest extends CypherFunSuite with AstRewritingTestSupport 
     val original = parse(from).asInstanceOf[Query]
     val expected = parse(to).asInstanceOf[Query]
     val attributes = Attributes(new SequentialIdGen())
-    val common = CNFNormalizer(attributes).instance(TestContext())
+    val common = CNFNormalizer.instance(TestState(), TestContext())
     val result = mergeInPredicates(attributes)(original)
 
     common(result) should equal(common(expected))

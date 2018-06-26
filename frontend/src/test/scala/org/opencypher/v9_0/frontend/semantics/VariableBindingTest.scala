@@ -18,23 +18,20 @@ package org.opencypher.v9_0.frontend.semantics
 import org.opencypher.v9_0.ast._
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.parser.CypherParser
-import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 import scala.reflect.ClassTag
 
 class VariableBindingTest extends CypherFunSuite {
 
-
   private def parseAndAnalyse(q: String) = {
     val scopes = new Scopes
     val bindings = new VariableBindings
-    val binder = new VariableBinder(bindings)
-    val parser = new CypherParser(Attributes(new SequentialIdGen()))
-    val x =  parser.parse(q)
+    val binder = new VariableBinder(bindings, scopes)
+    val x =  CypherParser.parse(q, new SequentialIdGen())
 
-
-    new TreeWalker(new Scoper(scopes), binder, mock[TypeExpecting]).visit(x.statement)
+    new TreeWalker(new Scoper(scopes), binder, mock[TypeExpecting], mock[BottomUpVisitor]).visit(x.statement)
     (bindings, x.statement)
   }
   
@@ -101,6 +98,20 @@ class VariableBindingTest extends CypherFunSuite {
     bindings.get(orderByVarReference) should equal(Reference(returnDeclaration))
   }
 
+  test("WITH is not too confusing") {
+    val (bindings, statement) =  parseAndAnalyse("MATCH (a) WITH a AS a RETURN a")
+
+    val matchDeclaration = statement.findByClass[NodePattern].variable.get.id
+    val withExp = statement.findByClass[AliasedReturnItem].expression.id
+    val withAlias = statement.findByClass[AliasedReturnItem].alias.get.id
+    val returnExp = statement.findByClass[UnaliasedReturnItem].expression.id
+
+    bindings.get(matchDeclaration) should equal(Declaration)
+    bindings.get(withExp) should equal(Reference(matchDeclaration))
+    bindings.get(withAlias) should equal(Declaration)
+    bindings.get(returnExp) should equal(Reference(withAlias))
+  }
+
   private def testa[A: ClassTag](q: String, fa: A => LogicalVariable): Unit = test(q) {
     val (bindings, statement) =  parseAndAnalyse(q)
 
@@ -111,7 +122,6 @@ class VariableBindingTest extends CypherFunSuite {
     bindings.get(returnVariableId) should equal(Reference(clauseId))
 
   }
-
 
 }
 

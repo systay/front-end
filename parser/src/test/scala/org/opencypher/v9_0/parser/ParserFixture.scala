@@ -16,11 +16,11 @@
 package org.opencypher.v9_0.parser
 
 import org.opencypher.v9_0.ast
-import org.opencypher.v9_0.util.attribution.{Attributes, SequentialIdGen}
+import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.scalatest.mock.MockitoSugar
 
 object ParserFixture extends MockitoSugar {
 
-  def parse(a: String): ast.Statement = new CypherParser(Attributes(new SequentialIdGen())).parse(a).statement
+  def parse(a: String): ast.Statement = CypherParser.parse(a, new SequentialIdGen()).statement
 
 }

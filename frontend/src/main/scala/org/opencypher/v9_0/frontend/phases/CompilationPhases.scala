@@ -19,24 +19,22 @@ import org.opencypher.v9_0.ast.Statement
 import org.opencypher.v9_0.ast.semantics.SemanticState
 import org.opencypher.v9_0.rewriting.RewriterStepSequencer
 import org.opencypher.v9_0.rewriting.rewriters.{IfNoParameter, LiteralExtraction}
-import org.opencypher.v9_0.util.attribution.Attributes
 
 object CompilationPhases {
 
   def parsing(sequencer: String => RewriterStepSequencer,
-              attributes: Attributes,
               literalExtraction: LiteralExtraction = IfNoParameter): Transformer[BaseContext, BaseState, BaseState] =
-    Parsing(attributes).adds(BaseContains[Statement]) andThen
+      Parsing.adds(BaseContains[Statement]) andThen
       SyntaxDeprecationWarnings andThen
-      PreparatoryRewriting(attributes) andThen
+      PreparatoryRewriting andThen
       SemanticAnalysis(warn = true).adds(BaseContains[SemanticState]) andThen
-      AstRewriting(sequencer, literalExtraction, attributes = attributes)
+      AstRewriting(sequencer, literalExtraction)
 
-  def lateAstRewriting(attributes: Attributes): Transformer[BaseContext, BaseState, BaseState] =
+  val lateAstRewriting: Transformer[BaseContext, BaseState, BaseState] =
     SemanticAnalysis(warn = false) andThen
-      Namespacer(attributes) andThen
-      transitiveClosure(attributes) andThen
-      rewriteEqualityToInPredicate(attributes) andThen
-      CNFNormalizer(attributes) andThen
-      LateAstRewriting(attributes)
+      Namespacer andThen
+      transitiveClosure andThen
+      rewriteEqualityToInPredicate andThen
+      CNFNormalizer andThen
+      LateAstRewriting
 }

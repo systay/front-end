@@ -67,7 +67,7 @@ class CollapseInCollectionsTest extends CypherFunSuite with AstRewritingTestSupp
 
   private def parse(query: String) = {
     val parsed = ParserFixture.parse(query)
-    val rewriter = CNFNormalizer(Attributes(new SequentialIdGen())).instance(TestContext())
+    val rewriter = CNFNormalizer.instance(TestState(), TestContext())
     parsed.endoRewrite(rewriter)
   }
 }

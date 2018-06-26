@@ -16,44 +16,74 @@
 package org.opencypher.v9_0.frontend.semantics
 
 import org.opencypher.v9_0.ast._
-import org.opencypher.v9_0.expressions.{LogicalVariable, NodePattern, RelationshipChain, Variable}
+import org.opencypher.v9_0.expressions.{LogicalVariable, NodePattern, RelationshipChain}
 import org.opencypher.v9_0.util.attribution.{Attribute, Id}
 import org.opencypher.v9_0.util.{ASTNode, InternalException}
+
+import scala.annotation.tailrec
+import scala.collection.mutable
 
 /*
 This class taking notes of variable declarations and references.
  */
-class VariableBinder(variableBindings: VariableBindings) extends VariableBinding {
-  override def bind(obj: ASTNode, scope: Scope, bindingMode: BindingMode): BindingMode = {
-    def declareVar(v: LogicalVariable): Unit = {
-      if(scope.getVariable(v.name).nonEmpty){
-        throw new VariableAlreadyDeclaredInScopeException(v)
-      }
-      scope.addVariable(v)
-      variableBindings.set(v.id, Declaration)
-    }
+class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends VariableBinding {
 
-    def declareIfNewVariable(v: LogicalVariable): Unit = {
-      scope.getVariable(v.name) match {
-        case Some(ref) =>
-          variableBindings.set(v.id, Reference(ref.id))
+
+  // When, during variable binding we are trying to declare one of our children,
+  // it might not yet have been scoped. This marker reminds us to declare it in
+  // the scope, once the object has been scoped correctly.
+  private val rememberToDeclare = new mutable.HashSet[Id]()
+  private val rememberToReferenceOrDeclare = new mutable.HashSet[Id]()
+
+
+  override def bind(obj: ASTNode, bindingMode: BindingMode): BindingMode = {
+    def declareVar(v: LogicalVariable): Unit =
+      scopes.optionalGet(v.id) match {
         case None =>
-          declareVar(v)
+          // We can't declare it until we have a scope
+          rememberToDeclare.add(v.id)
+
+        case Some(scope) =>
+          scope.addVariable(v)
+          variableBindings.set(v.id, Declaration)
       }
-    }
+
+    def referenceOrDeclare(v: LogicalVariable): Unit =
+      scopes.optionalGet(v.id) match {
+        case None =>
+          // We have to wait with actually doing this until we have a scope
+          rememberToReferenceOrDeclare.add(v.id)
+
+        case Some(scope) =>
+          scope.getVariable(v.name) match {
+            case Some(ref) =>
+              variableBindings.set(v.id, Reference(ref.id))
+            case None =>
+              declareVar(v)
+          }
+      }
 
     (obj, bindingMode) match {
-      case (_: Match, _) =>
-        BindingAllowed
+      case (m: Match, _) =>
+        BindingAllowed(m.optional)
+
+      case (ast: LogicalVariable, _) if rememberToDeclare(ast.id) =>
+        declareVar(ast)
+        bindingMode
+
+      case (ast: LogicalVariable, _) if rememberToReferenceOrDeclare(ast.id) =>
+        referenceOrDeclare(ast)
+        bindingMode
 
       case (ast: LogicalVariable, _) if variableBindings.contains(ast.id) =>
         bindingMode
 
-      case (ast: LogicalVariable, BindingAllowed) =>
-        declareIfNewVariable(ast)
+      case (ast: LogicalVariable, _: BindingAllowed) =>
+        referenceOrDeclare(ast)
         bindingMode
 
       case (ast: LogicalVariable, ReferenceOnly) =>
+        val scope = scopes.get(ast.id)
         scope.getVariable(ast.name) match {
           case Some(ref) =>
             variableBindings.set(ast.id, Reference(ref.id))
@@ -76,18 +106,19 @@ class VariableBinder(variableBindings: VariableBindings) extends VariableBinding
 
       case (relationshipChain: RelationshipChain, RelationshipBindingOnly) =>
         relationshipChain.relationship.variable.foreach(declareVar)
-        relationshipChain.rightNode.variable.foreach(declareIfNewVariable)
+        relationshipChain.rightNode.variable.foreach(referenceOrDeclare)
         relationshipChain.element match {
           case leftNode: NodePattern =>
-            leftNode.variable.foreach(declareIfNewVariable)
+            leftNode.variable.foreach(referenceOrDeclare)
         }
         bindingMode
 
-      case (NodePattern(Some(variable), _, _, _), RelationshipBindingOnly) if !variableBindings.contains(variable.id) =>
+      case (NodePattern(Some(variable), _, _, _), RelationshipBindingOnly)
+        if !variableBindings.contains(variable.id) && !rememberToReferenceOrDeclare(variable.id) =>
         declareVar(variable)
         bindingMode
 
-      case (as : AliasedReturnItem, _) =>
+      case (as: AliasedReturnItem, _) =>
         declareVar(as.variable)
         bindingMode
 
@@ -103,22 +134,27 @@ class VariableBinder(variableBindings: VariableBindings) extends VariableBinding
 sealed trait VariableUse
 
 case class Reference(id: Id) extends VariableUse
-
-object Declaration extends VariableUse
+case object Declaration extends VariableUse
 
 class VariableBindings extends Attribute[VariableUse]
 
 // This is the Attribute[VariableUse] in a form that is easy to consume by the type algorithm
-class Bindings(rootNode: ASTNode, val variableBindings: VariableBindings) {
-  def declarationOf(v: LogicalVariable): Option[Variable] = {
-    val id =
-      variableBindings.get(v.id) match {
-        case Declaration => throw new InternalException("this is a declaration")
-        case Reference(x) => x
-      }
+class BindingsLookup(rootNode: ASTNode, variableBindings: VariableBindings) {
+  def declarationOf(v: LogicalVariable): LogicalVariable = {
+    val id = getDeclaration(v.id)
 
-    rootNode.treeFind[Variable] {
+    rootNode.treeFind[LogicalVariable] {
       case x: LogicalVariable => x.id == id
+    }.getOrElse(throw new InternalException("Was not able to find the declaration of this variable"))
+  }
+
+  def isDeclaration(v: LogicalVariable): Boolean = variableBindings.get(v.id) == Declaration
+
+  @tailrec
+  private def getDeclaration(id: Id): Id = {
+    variableBindings.get(id) match {
+      case Declaration => id
+      case Reference(x) => getDeclaration(x)
     }
   }
 }

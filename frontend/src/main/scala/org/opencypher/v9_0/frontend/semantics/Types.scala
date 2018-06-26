@@ -69,6 +69,11 @@ object Types {
   case object GraphRefType extends NewCypherType
   case object DateType extends NewCypherType
   case object TimeType extends NewCypherType
+  case object DateTimeType extends NewCypherType
+  case object LocalDateTimeType extends NewCypherType
+  case object LocalTimeType extends NewCypherType
+  case object DurationType extends NewCypherType
+
 
   // This special type is used to stop type possibility explosion -
   // a list of any type could be a list of lists, or a list of list of list.
@@ -86,15 +91,37 @@ object Types {
 
     def apply(t: NewCypherType*): MapType = MapType(t.toSet)
   }
-
 }
 
 // TypeInfo contains both the set of possibles types and whether it is nullable or not.
-case class TypeInfo(possible: Set[NewCypherType], nullable: Boolean)
+class TypeInfo(val possible: Set[NewCypherType], val nullable: Boolean) {
+  def containsAnyOf(types: NewCypherType*): Boolean = (possible intersect (types.toSet)).nonEmpty
+  def containsAny(typ: Set[NewCypherType]): Boolean = (possible intersect typ).nonEmpty
+
+  def canEqual(other: Any): Boolean = other.isInstanceOf[TypeInfo]
+
+  override def equals(other: Any): Boolean = other match {
+    case that: TypeInfo =>
+      (that canEqual this) &&
+        possible == that.possible &&
+        nullable == that.nullable
+    case _ => false
+  }
+
+  override def hashCode(): Int = possible.hashCode() + 31 * nullable.hashCode()
+
+
+  override def toString = s"TypeInfo((${possible.mkString(", ")}), nullable = $nullable)"
+}
+
+object TypeInfo {
+  def apply(nullable: Boolean, types: NewCypherType*) = new TypeInfo(types.toSet, nullable)
+}
+
 object NullableType {
-  def apply(possible: NewCypherType*) = TypeInfo(possible.toSet, nullable = true)
+  def apply(possible: NewCypherType*) = new TypeInfo(possible.toSet, nullable = true)
 }
 
 object NonNullableType {
-  def apply(possible: NewCypherType*) = TypeInfo(possible.toSet, nullable = false)
+  def apply(possible: NewCypherType*) = new TypeInfo(possible.toSet, nullable = false)
 }

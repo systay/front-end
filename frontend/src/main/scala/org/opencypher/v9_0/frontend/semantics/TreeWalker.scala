@@ -15,6 +15,7 @@
  */
 package org.opencypher.v9_0.frontend.semantics
 
+import org.opencypher.v9_0.expressions.Expression
 import org.opencypher.v9_0.util.ASTNode
 import org.opencypher.v9_0.util.Foldable._
 
@@ -23,10 +24,22 @@ import scala.collection.mutable
 /*
 This class is responsible for walking the AST tree and knowing how to stitch together the different
 parts of semantic analysis together.
+
+Traversal of the tree is not done using recursion, because we encounter trees large enough to cause a problem
+with the JVM-stack. Instead, a manual stack and a good old while loop is used.
+
+The stages (scoping, binding, etc) get to visit nodes at different phases of the tree walking.
+
+
+
+
+
+
  */
 class TreeWalker(scoping: Scoping,
                  variableBinding: VariableBinding,
-                 typeExpecting: TypeExpecting) {
+                 typeExpecting: TypeExpecting,
+                 bottomUpVisitor: BottomUpVisitor) {
   def visit(astRoot: ASTNode): Unit = {
     val todo = new mutable.ArrayStack[Move]()
     todo.push(Down(astRoot))
@@ -35,24 +48,29 @@ class TreeWalker(scoping: Scoping,
     var currentScope = scopeForEntireQuery.createInnerScope()
     var currentBindingMode: BindingMode = ReferenceOnly
 
-    def doSemanticAnalysis(ast: ASTNode): Unit = {
+    def analysisGoingDown(ast: ASTNode): Unit = {
+
+      val bindingMode = currentBindingMode
+
       val scopingResult = scoping.scope(ast, currentScope)
-      todo.push(Up(ast, scopingResult.comingUpScope, currentBindingMode))
-      currentBindingMode = variableBinding.bind(ast, currentScope, currentBindingMode)
+      todo.push(Up(ast, scopingResult.comingUpScope, bindingMode))
+      currentBindingMode = variableBinding.bind(ast, bindingMode)
+      typeExpecting.visit(ast, bindingMode)
+
       scopingResult.changeCurrentScopeTo.foreach { s =>
         currentScope = s
       }
-      typeExpecting.visit(ast)
     }
 
 
     while (todo.nonEmpty) {
       val currentNode = todo.pop()
+      println(currentNode)
 
       currentNode match {
         case Down(obj) =>
           obj match {
-            case node: ASTNode => doSemanticAnalysis(node)
+            case node: ASTNode => analysisGoingDown(node)
             case _ =>
           }
 
@@ -61,7 +79,13 @@ class TreeWalker(scoping: Scoping,
           }
 
 
-        case Up(_, maybeScope, bindingMode) =>
+        case Up(node, maybeScope, bindingMode) =>
+          node match {
+            case e: Expression =>
+                bottomUpVisitor.visit(e)
+            case _ =>
+          }
+
           maybeScope.foreach { s =>
             currentScope = s
           }
@@ -85,17 +109,29 @@ trait Scoping {
 }
 
 trait VariableBinding {
-  def bind(ast: ASTNode, scope: Scope, bindingMode: BindingMode): BindingMode
+  def bind(ast: ASTNode, bindingMode: BindingMode): BindingMode
 }
 
 trait TypeExpecting {
-  def visit(ast: ASTNode): Unit
+  def visit(ast: ASTNode, bindingMode: BindingMode): Unit
 }
 
+trait BottomUpVisitor {
+  self =>
+
+  def visit(e: ASTNode): Unit
+
+  def andThen(other: BottomUpVisitor): BottomUpVisitor = new BottomUpVisitor {
+    override def visit(e: ASTNode): Unit = {
+      self.visit(e)
+      other.visit(e)
+    }
+  }
+}
 
 
 // When visiting the tree, we need to sometimes remember if
 trait BindingMode
-case object BindingAllowed extends BindingMode
+case class BindingAllowed(nullable: Boolean) extends BindingMode
 case object ReferenceOnly extends BindingMode
 case object RelationshipBindingOnly extends BindingMode

@@ -22,24 +22,28 @@ import org.opencypher.v9_0.util.{Rewriter, bottomUp}
 /*
 TODO: This should implement Rewriter instead
  */
-case class rewriteEqualityToInPredicate(attributes: Attributes) extends StatementRewriter {
+case object rewriteEqualityToInPredicate extends StatementRewriter {
 
   override def description: String = "normalize equality predicates into IN comparisons"
 
-  override def instance(ignored: BaseContext): Rewriter = bottomUp(Rewriter.lift {
-    // id(a) = value => id(a) IN [value]
-    case predicate@Equals(func@FunctionInvocation(_, _, _, IndexedSeq(idExpr)), idValueExpr)
-      if func.function == functions.Id =>
-      In(func.selfThis, ListLiteral(Seq(idValueExpr))(idValueExpr.position)(attributes.copy(idValueExpr.id)))(predicate.position)(attributes.copy(predicate.id))
 
-    // Equality between two property lookups should not be rewritten
-    case predicate@Equals(_:Property, _:Property) =>
-      predicate.selfThis
+  override def instance(in: BaseState, ctx: BaseContext): Rewriter = {
+    val attributes = Attributes(ctx.astIdGen, in.positions())
+    bottomUp(Rewriter.lift {
+      // id(a) = value => id(a) IN [value]
+      case predicate@Equals(func@FunctionInvocation(_, _, _, IndexedSeq(idExpr)), idValueExpr)
+        if func.function == functions.Id =>
+        In(func.selfThis, ListLiteral(Seq(idValueExpr))(idValueExpr.position)(attributes.copy(idValueExpr.id)))(predicate.position)(attributes.copy(predicate.id))
 
-    // a.prop = value => a.prop IN [value]
-    case predicate@Equals(prop@Property(id: Variable, propKeyName), idValueExpr) =>
-      In(prop.selfThis, ListLiteral(Seq(idValueExpr))(idValueExpr.position)(attributes.copy(idValueExpr.id)))(predicate.position)(attributes.copy(predicate.id))
-  })
+      // Equality between two property lookups should not be rewritten
+      case predicate@Equals(_:Property, _:Property) =>
+        predicate.selfThis
+
+      // a.prop = value => a.prop IN [value]
+      case predicate@Equals(prop@Property(id: Variable, propKeyName), idValueExpr) =>
+        In(prop.selfThis, ListLiteral(Seq(idValueExpr))(idValueExpr.position)(attributes.copy(idValueExpr.id)))(predicate.position)(attributes.copy(predicate.id))
+    })
+  }
 
   override def postConditions: Set[Condition] = Set.empty
 }

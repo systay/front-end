@@ -23,20 +23,23 @@ import org.opencypher.v9_0.frontend.phases.CompilationPhaseTracer.CompilationPha
 import org.opencypher.v9_0.util.attribution.{Attributes, SameId}
 import org.opencypher.v9_0.util.{Ref, Rewriter, bottomUp, inSequence}
 
-case class Namespacer(attributes: Attributes) extends Phase[BaseContext, BaseState, BaseState] {
+case object Namespacer extends Phase[BaseContext, BaseState, BaseState] {
   type VariableRenamings = Map[Ref[Variable], Variable]
 
   override def phase: CompilationPhase = AST_REWRITE
 
   override def description: String = "rename variables so they are all unique"
 
-  override def process(from: BaseState, ignored: BaseContext): BaseState = {
+  override def process(from: BaseState, ctx: BaseContext): BaseState = {
+
     val ambiguousNames = shadowedNames(from.semantics().scopeTree)
     val variableDefinitions: Map[SymbolUse, SymbolUse] = from.semantics().scopeTree.allVariableDefinitions
     val protectedVariables = returnAliases(from.statement())
     val renamings = variableRenamings(from.statement(), variableDefinitions, ambiguousNames, protectedVariables)
 
-    val rewriter = renamingRewriter(renamings)
+    val attributes = Attributes(ctx.astIdGen, from.positions())
+
+    val rewriter = renamingRewriter(renamings, attributes)
     val newStatement = from.statement().endoRewrite(rewriter)
     val table = SemanticTable(types = from.semantics().typeTable, recordedScopes = from.semantics().recordedScopes)
 
@@ -76,7 +79,7 @@ case class Namespacer(attributes: Attributes) extends Phase[BaseContext, BaseSta
         acc => (acc + renaming, Some(identity))
     }
 
-  private def renamingRewriter(renamings: VariableRenamings): Rewriter = inSequence(
+  private def renamingRewriter(renamings: VariableRenamings, attributes: Attributes): Rewriter = inSequence(
     bottomUp(Rewriter.lift {
       case item@ProcedureResultItem(None, v: Variable) if renamings.contains(Ref(v)) =>
         item.copy(output = Some(ProcedureOutput(v.name)(v.position)(attributes.copy(v.id))))(item.position)(SameId(item.id))

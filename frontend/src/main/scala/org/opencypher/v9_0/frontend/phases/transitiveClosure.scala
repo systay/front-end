@@ -30,30 +30,20 @@ import org.opencypher.v9_0.util.{Rewriter, bottomUp}
   * Given a where clause, `WHERE a.prop = b.prop AND b.prop = 42` we rewrite the query
   * into `WHERE a.prop = 42 AND b.prop = 42`
   */
-case class transitiveClosure(attributes: Attributes) extends StatementRewriter {
+case object transitiveClosure extends StatementRewriter {
 
   override def description: String = "transitive closure in where clauses"
 
-  override def instance(ignored: BaseContext): Rewriter = transitiveClosureRewriter
+  override def instance(in: BaseState, ctx: BaseContext): Rewriter = {
+    val attributes = Attributes(ctx.astIdGen, in.positions())
+    transitiveClosureRewriter(attributes)
+  }
 
   override def postConditions: Set[Condition] = Set.empty
 
-  private case object transitiveClosureRewriter extends Rewriter {
+  private case class transitiveClosureRewriter(attributes: Attributes) extends Rewriter {
 
     def apply(that: AnyRef): AnyRef = instance.apply(that)
-
-    private val instance: Rewriter = bottomUp(Rewriter.lift {
-      case where: Where => fixedPoint((w: Where) => w.endoRewrite(whereRewriter))(where)
-    })
-
-    //Collects property equalities, e.g `a.prop = 42`
-    private def collect(e: Expression): Closures = e.treeFold(Closures.empty) {
-      case _: Or => (acc) => (acc, None)
-      case _: And => (acc) => (acc, Some(identity))
-      case Equals(p1: Property, p2: Property) => (acc) => (acc.withEquivalence(p1 -> p2), None)
-      case Equals(p: Property, other) => (acc) => (acc.withMapping(p -> other), None)
-      case Not(Equals(_,_)) => (acc) => (acc, None)
-    }
 
     //NOTE that this might introduce duplicate predicates, however at a later rewrite
     //when AND is turned into ANDS we remove all duplicates
@@ -69,6 +59,20 @@ case class transitiveClosure(attributes: Attributes) extends StatementRewriter {
           case (acc, (prop, expr)) => And(acc, Equals(prop, expr)(acc.position)(attributes.copy(acc.id)))(acc.position)(attributes.copy(acc.id))
         }
     })
+
+    private val instance: Rewriter = bottomUp(Rewriter.lift {
+      case where: Where => fixedPoint((w: Where) => w.endoRewrite(whereRewriter))(where)
+    })
+
+    //Collects property equalities, e.g `a.prop = 42`
+    private def collect(e: Expression): Closures = e.treeFold(Closures.empty) {
+      case _: Or => (acc) => (acc, None)
+      case _: And => (acc) => (acc, Some(identity))
+      case Equals(p1: Property, p2: Property) => (acc) => (acc.withEquivalence(p1 -> p2), None)
+      case Equals(p: Property, other) => (acc) => (acc.withMapping(p -> other), None)
+      case Not(Equals(_,_)) => (acc) => (acc, None)
+    }
+
 
     private def andRewriter(closures: Closures): Rewriter = {
       val stopOnNotEquals: AnyRef => Boolean = {

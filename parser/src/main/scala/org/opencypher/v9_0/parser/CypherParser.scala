@@ -16,36 +16,32 @@
 package org.opencypher.v9_0.parser
 
 import org.opencypher.v9_0.ast
-import org.opencypher.v9_0.util.attribution.{Attributes, IdGen}
-import org.opencypher.v9_0.util.{InputPosition, InputPositions, InternalException, SyntaxException}
+import org.opencypher.v9_0.util.attribution.IdGen
+import org.opencypher.v9_0.util.{InputPosition, InputPositions, SyntaxException}
 import org.parboiled.scala._
 
-/**
-  * This class should not be used to parse multiple queries. It should only be used once.
-  */
-class CypherParser(attributes: Attributes) extends Parser
-  with Statement
-  with Expressions {
 
-  override implicit val idGen: IdGen = attributes.idGen
-  override protected val positions = new InputPositions
+case class ParseResult(statement: ast.Statement, positions: InputPositions)
 
-  // TODO: This is a hack. If we can't re-use the parser, we should design it differently.
-  private var _used = false
-
+//noinspection TypeAnnotation
+object CypherParser {
   @throws(classOf[SyntaxException])
-  def parse(queryText: String, offset: Option[InputPosition] = None): ParseResult =
-    if (_used)
-      throw new InternalException("not safe to use the parser for more than one query!")
-    else {
-      _used = true
-      ParseResult(parseOrThrow(queryText, offset, statements), positions)
+  def parse(queryText: String, astIdGen: IdGen, offset: Option[InputPosition] = None): ParseResult = {
+
+    val innerParser = new Parser with Statement with Expressions {
+      override implicit val idGen: IdGen = astIdGen
+      override protected val positions = new InputPositions
+      private val statements: Rule1[Seq[ast.Statement]] = rule {
+        oneOrMore(WS ~ Statement ~ WS, separator = ch(';')) ~~ optional(ch(';')) ~~ EOI.label("end of input")
+      }
+
+      def parse(queryText: String, offset: Option[InputPosition] = None): ParseResult = {
+        ParseResult(parseOrThrow(queryText, offset, statements), positions)
+      }
+
     }
 
-  private val statements: Rule1[Seq[ast.Statement]] = rule {
-    oneOrMore(WS ~ Statement ~ WS, separator = ch(';')) ~~ optional(ch(';')) ~~ EOI.label("end of input")
+    innerParser.parse(queryText, offset)
   }
 
 }
-
-case class ParseResult(statement: ast.Statement, positions: InputPositions)

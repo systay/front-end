@@ -16,9 +16,9 @@
 package org.opencypher.v9_0.frontend.phases
 
 import org.opencypher.v9_0.ast.UnaliasedReturnItem
-import org.opencypher.v9_0.ast.semantics.{SemanticChecker, SemanticFeature, SemanticState}
 import org.opencypher.v9_0.ast.semantics.{SemanticCheckResult, SemanticChecker, SemanticFeature, SemanticState}
 import org.opencypher.v9_0.frontend.phases.CompilationPhaseTracer.CompilationPhase.SEMANTIC_CHECK
+import org.opencypher.v9_0.frontend.semantics._
 import org.opencypher.v9_0.rewriting.conditions.containsNoNodesOfType
 
 case class SemanticAnalysis(warn: Boolean, features: SemanticFeature*)
@@ -36,6 +36,19 @@ case class SemanticAnalysis(warn: Boolean, features: SemanticFeature*)
     if (warn) state.notifications.foreach(context.notificationLogger.log)
 
     context.errorHandler(errors)
+
+    val scopes = new Scopes
+    val bindings = new VariableBindings
+    val expectations = new TypeExpectations
+    val scoping = new Scoper(scopes)
+    val binding = new VariableBinder(bindings, scopes)
+    val types = new TypeJudgements()
+    val typeExpectationsGenerator = new TypeExpectationsGenerator(expectations, types)
+    val typeJudgements = new TypeJudgementGenerator(types, new BindingsLookup(from.statement(), bindings), expectations)
+    val semanticAnalyser = new TreeWalker(scoping, binding, typeExpectationsGenerator, typeJudgements)
+
+    semanticAnalyser.visit(from.statement())
+
 
     from.withSemanticState(state)
   }
