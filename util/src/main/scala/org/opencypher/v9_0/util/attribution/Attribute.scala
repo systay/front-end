@@ -16,6 +16,7 @@
 package org.opencypher.v9_0.util.attribution
 
 import org.opencypher.v9_0.util.Unchangeable
+import org.opencypher.v9_0.util.attribution.Attribute.DEBUG
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -23,7 +24,16 @@ trait Attribute[T] {
 
   private val array: ArrayBuffer[Unchangeable[T]] = new ArrayBuffer[Unchangeable[T]]()
 
+  private def debugPrint(verb: String, id: Id, value: Any): Unit = if(DEBUG) {
+    val c = this.getClass.getSimpleName.padTo(20, " ").mkString
+    val v = verb.padTo(14, " ").mkString
+    val i = id.x.toString.padTo(4, " ").mkString
+
+    println(s"$c$v$i$value")
+  }
+
   def set(id: Id, t: T): Unit = {
+    debugPrint("SET", id, t)
     val requiredSize = id.x + 1
     if (array.size < requiredSize)
       resizeArray(requiredSize)
@@ -31,7 +41,7 @@ trait Attribute[T] {
   }
 
   def optionalGet(id: Id): Option[T] = {
-    if (array.size <= id.x)
+    val result = if (array.size <= id.x)
       None
     else {
       val values = array(id.x)
@@ -40,10 +50,14 @@ trait Attribute[T] {
       else
         None
     }
+    debugPrint("TRY GET", id, result)
+    result
   }
 
   def get(id: Id): T = {
-    array(id.x).value
+    val result = array(id.x).value
+    debugPrint("GET", id, result)
+    result
   }
 
   def contains(id: Id): Boolean = isDefinedAt(id)
@@ -159,4 +173,8 @@ case class Attributes(idGen: IdGen, private val attributes: Attribute[_]*) {
   def withAlso(attributes: Attribute[_]*) : Attributes = {
     Attributes(this.idGen, this.attributes ++ attributes: _*)
   }
+}
+
+object Attribute {
+  val DEBUG = false
 }

@@ -35,6 +35,8 @@ class TypeJudgementGeneratorTest extends CypherFunSuite {
     val binder = new VariableBinder(bindings, scopes)
     val generator = new TypeExpectationsGenerator(expectations, types)
 
+    println(TreeWithId2String.toString(x.statement))
+
     new TreeWalker(scoper, binder, generator, typer).visit(x.statement)
 
     val expressionId = x.statement.findByClass[UnaliasedReturnItem].expression.id

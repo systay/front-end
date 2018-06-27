@@ -18,6 +18,7 @@ package org.opencypher.v9_0.frontend.semantics
 import org.opencypher.v9_0.expressions.Expression
 import org.opencypher.v9_0.util.ASTNode
 import org.opencypher.v9_0.util.Foldable._
+import org.opencypher.v9_0.util.attribution.Attribute.DEBUG
 
 import scala.collection.mutable
 
@@ -49,7 +50,7 @@ class TreeWalker(scoping: Scoping,
     var currentBindingMode: BindingMode = ReferenceOnly
 
     def analysisGoingDown(ast: ASTNode): Unit = {
-
+      debugPrint("DOWN", ast)
       val bindingMode = currentBindingMode
 
       val scopingResult = scoping.scope(ast, currentScope)
@@ -65,7 +66,6 @@ class TreeWalker(scoping: Scoping,
 
     while (todo.nonEmpty) {
       val currentNode = todo.pop()
-      println(currentNode)
 
       currentNode match {
         case Down(obj) =>
@@ -80,20 +80,29 @@ class TreeWalker(scoping: Scoping,
 
 
         case Up(node, maybeScope, bindingMode) =>
+          debugPrint("UP", node)
+          maybeScope.foreach { s =>
+            currentScope = s
+          }
+
           node match {
             case e: Expression =>
                 bottomUpVisitor.visit(e)
             case _ =>
           }
 
-          maybeScope.foreach { s =>
-            currentScope = s
-          }
           currentBindingMode = bindingMode
       }
     }
   }
 
+  private def debugPrint(verb: String, value: ASTNode) = if(DEBUG) {
+    val c = this.getClass.getSimpleName.padTo(20, " ").mkString
+    val v = verb.padTo(14, " ").mkString
+    val i = value.id.x.toString.padTo(4, " ").mkString
+
+    println(s"$c$v$i${value.getClass.getSimpleName}")
+  }
 
 }
 

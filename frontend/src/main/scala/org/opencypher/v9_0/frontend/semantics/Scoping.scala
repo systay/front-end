@@ -142,7 +142,7 @@ class NormalScope(parent: Option[Scope] = None, var locals: Set[LogicalVariable]
 
   override def toString: String = {
     val parentS = parent.map(_.toString).getOrElse("")
-    s" Scope${id.x}($parentS)"
+    s"Scope${id.x}"
   }
 
   override def popScope(): Scope = parent.getOrElse(throw new InternalException("have no scope to pop at this location"))

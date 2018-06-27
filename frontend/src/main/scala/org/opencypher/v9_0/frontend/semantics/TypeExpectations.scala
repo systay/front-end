@@ -45,8 +45,7 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
     if(types.contains(from.id))
       typeExpectations.set(to.id, types.get(from.id))
     else {
-      println(s"waiting to set expectation on ${to.id} until we know the type of ${from.id}")
-      typeExpectFromReference.put(from.id, to.id)
+      typeExpectFromReference.put(to.id, from.id)
     }
   }
   private def set(ast: ASTNode, t: TypeInfo): Unit = typeExpectations.set(ast.id, t)
@@ -75,6 +74,7 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
         set(where.expression, bool)
 
       case AliasedReturnItem(exp, alias) =>
+        set(exp, new TypeInfo(Types.ANY, true))
         copyTypesBetween(from = exp, to = alias)
 
       // Expressions
