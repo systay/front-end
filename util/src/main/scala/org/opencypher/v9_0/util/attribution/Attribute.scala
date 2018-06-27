@@ -25,9 +25,9 @@ trait Attribute[T] {
   private val array: ArrayBuffer[Unchangeable[T]] = new ArrayBuffer[Unchangeable[T]]()
 
   private def debugPrint(verb: String, id: Id, value: Any): Unit = if(DEBUG) {
-    val c = this.getClass.getSimpleName.padTo(20, " ").mkString
-    val v = verb.padTo(14, " ").mkString
-    val i = id.x.toString.padTo(4, " ").mkString
+    val c: String = this.getClass.getSimpleName.padTo(20, " ").mkString
+    val v: String = verb.padTo(14, " ").mkString
+    val i: String = id.x.toString.padTo(4, " ").mkString
 
     println(s"$c$v$i$value")
   }

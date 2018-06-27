@@ -21,12 +21,37 @@ import org.opencypher.v9_0.frontend.semantics.Types._
 import org.opencypher.v9_0.util.attribution.Attribute
 import org.opencypher.v9_0.util.{ASTNode, InternalException}
 
+import scala.collection.mutable
+
 class TypeJudgementGenerator(types: TypeJudgements,
                              bindingsLookup: BindingsLookup,
                              expectations: TypeExpectations) extends BottomUpVisitor {
 
   private def setTypeFromExpectations(v: LogicalVariable): Unit =
     set(v, expectations.get(v.id))
+
+  case class T(test1: Set[NewCypherType], test2: Set[NewCypherType], result: Set[NewCypherType])
+
+  class TypeCalculation {
+    private val acc = new mutable.ListBuffer[(Set[NewCypherType], Set[NewCypherType], Set[NewCypherType])]()
+
+    def -->(apa1: NewCypherType*)(apa2: NewCypherType*)(apa3: NewCypherType*): TypeCalculation = {
+      acc.append((apa1.toSet, apa2.toSet, apa3.toSet))
+      this
+    }
+
+    def calculate(lhs: Set[NewCypherType], rhs: Set[NewCypherType]): Set[NewCypherType] = acc.toList.foldLeft(Set.empty[NewCypherType]) {
+      case (accumulated, (test1, test2, result)) =>
+        if (
+          overlaps(lhs, test1) && overlaps(rhs, test2) ||
+          overlaps(lhs, test2) && overlaps(rhs, test1))
+          accumulated ++ result
+        else
+          accumulated
+    }
+
+    private def overlaps(lhs: Set[NewCypherType], rhs: Set[NewCypherType]) = (lhs intersect rhs).nonEmpty
+  }
 
   override def visit(e: ASTNode): Unit = try {
     e match {
@@ -42,6 +67,34 @@ class TypeJudgementGenerator(types: TypeJudgements,
       // ARITHMETICS
 
       case x: Add =>
+        val lhsTypes = types.get(x.lhs.id)
+        val rhsTypes = types.get(x.rhs.id)
+
+        val scalarTypes = new TypeCalculation().
+          -->(StringType, IntegerType, FloatType)(StringType)            (StringType).
+          -->(StringType)                        (IntegerType, FloatType)(StringType).
+          -->(IntegerType)                       (IntegerType)           (IntegerType).
+          -->(FloatType)                         (FloatType, IntegerType)(FloatType).
+          -->(DurationType)                      (DurationType)          (DurationType).
+          -->(DurationType)                      (DateType)              (DateType).
+          -->(DurationType)                      (TimeType)              (TimeType).
+          -->(DurationType)                      (DateTimeType)          (DateTimeType).
+          -->(DurationType)                      (LocalTimeType)         (LocalTimeType).
+          -->(DurationType)                      (LocalDateTimeType)     (LocalDateTimeType).
+          calculate(lhsTypes.possible, rhsTypes.possible)
+
+        val listTypes: Set[NewCypherType] = for {
+          lhs <- lhsTypes.possible
+          rhs <- rhsTypes.possible if lhs.isList || rhs.isList
+        } yield (lhs, rhs) match {
+            case (ListType(leftInner), ListType(rightInner)) => ListType(leftInner ++ rightInner)
+            case (ListType(leftInner), other) => ListType(leftInner + other)
+            case (other, ListType(leftInner)) => ListType(leftInner + other)
+          }
+
+        val nullability = lhsTypes.nullable || rhsTypes.nullable
+
+        set(x, new TypeInfo(scalarTypes | listTypes, nullability))
 
       case x: Subtract => ???
       case x: UnarySubtract => ???
@@ -146,6 +199,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
 
   private def setNullable(e: Expression, calculatedTypes: NewCypherType*): Unit =
     set(e, new TypeInfo(calculatedTypes.toSet, true))
+
 
 }
 

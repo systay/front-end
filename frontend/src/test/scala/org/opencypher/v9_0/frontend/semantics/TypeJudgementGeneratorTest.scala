@@ -35,17 +35,14 @@ class TypeJudgementGeneratorTest extends CypherFunSuite {
     val binder = new VariableBinder(bindings, scopes)
     val generator = new TypeExpectationsGenerator(expectations, types)
 
-    println(TreeWithId2String.toString(x.statement))
-
     new TreeWalker(scoper, binder, generator, typer).visit(x.statement)
 
     val expressionId = x.statement.findByClass[UnaliasedReturnItem].expression.id
     types.get(expressionId) should equal(expectedTypeInfo)
   }
 
-
-//  testa("MATCH (a) RETURN (a)-->()", TypeInfo(Set(ListType(PathType)), nullable = true))
-//  testa("MATCH (a) RETURN a", TypeInfo(Set(NodeType), nullable = false))
-//  testa("RETURN [1,2,3]", TypeInfo(Set(ListType(IntegerType)), nullable = false))
+  testa("MATCH (a) RETURN (a)-->()", NullableType(ListType(PathType)))
+  testa("MATCH (a) RETURN a", NonNullableType(NodeType))
+  testa("RETURN [1,2,3]", NonNullableType(ListType(IntegerType)))
   testa("MATCH (a) WITH a AS a RETURN a", NonNullableType(NodeType))
 }

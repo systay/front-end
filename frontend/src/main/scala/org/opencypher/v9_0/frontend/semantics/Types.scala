@@ -19,7 +19,10 @@ import org.opencypher.v9_0.frontend.semantics.Types.NewCypherType
 
 object Types {
 
-  sealed trait NewCypherType
+  sealed trait NewCypherType {
+    def isList = false
+    def isMap = false
+  }
 
   case class ListType(inner: Set[NewCypherType]) extends NewCypherType {
     override def toString: String = s"List[${inner.mkString(",")}]"
@@ -34,10 +37,14 @@ object Types {
         ???
       else
         inner
+
+    override def isList: Boolean = true
   }
 
   case class MapType(possibleTypes: Set[NewCypherType]) extends NewCypherType {
     override def toString: String = s"Map[${possibleTypes.mkString(",")}]"
+
+    override def isMap: Boolean = true
   }
 
   val ANY: Set[NewCypherType] = Set(
@@ -54,7 +61,11 @@ object Types {
     PathType,
     GraphRefType,
     DateType,
-    TimeType
+    TimeType,
+    DateTimeType,
+    LocalDateTimeType,
+    LocalTimeType,
+    DurationType
   )
 
   case object IntegerType extends NewCypherType
