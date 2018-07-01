@@ -67,6 +67,9 @@ class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends
       case (m: Match, _) =>
         BindingAllowed(m.optional)
 
+      case (_: Create|_:Merge, _) =>
+        RelationshipBindingOnly
+
       case (ast: LogicalVariable, _) if rememberToDeclare(ast.id) =>
         declareVar(ast)
         bindingMode

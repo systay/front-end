@@ -30,12 +30,6 @@ Traversal of the tree is not done using recursion, because we encounter trees la
 with the JVM-stack. Instead, a manual stack and a good old while loop is used.
 
 The stages (scoping, binding, etc) get to visit nodes at different phases of the tree walking.
-
-
-
-
-
-
  */
 class TreeWalker(scoping: Scoping,
                  variableBinding: VariableBinding,
@@ -96,7 +90,7 @@ class TreeWalker(scoping: Scoping,
     }
   }
 
-  private def debugPrint(verb: String, value: ASTNode) = if(DEBUG) {
+  private def debugPrint(verb: String, value: ASTNode): Unit = if(DEBUG) {
     val c = this.getClass.getSimpleName.padTo(20, " ").mkString
     val v = verb.padTo(14, " ").mkString
     val i = value.id.x.toString.padTo(4, " ").mkString
@@ -133,7 +127,7 @@ trait BottomUpVisitor {
   def andThen(other: BottomUpVisitor): BottomUpVisitor = new BottomUpVisitor {
     override def visit(e: ASTNode): Unit = {
       self.visit(e)
-      other.visit(e)
+       other.visit(e)
     }
   }
 }

@@ -76,7 +76,8 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
       case v: LogicalVariable if typeExpectFromReference.contains(v.id) =>
         set(v, types.get(typeExpectFromReference(v.id)))
 
-      case NodePattern(Some(variable), _, _, _) =>
+      case NodePattern(Some(variable), _, props, _) =>
+        props.foreach(e => set(e, NonNullableType(MapType(?))))
         set(variable, TypeInfo(nullable, NodeType))
 
       case RelationshipPattern(Some(variable), _, _, _, _, _ ,_) =>
@@ -246,7 +247,7 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
   }
 }
 
-class TypeExpectationsAfterTyping(typeExpectations: TypeExpectations, typeJudgements: TypeJudgements) extends BottomUpVisitor {
+class TypeExpectationsAfterJudgements(typeExpectations: TypeExpectations, typeJudgements: TypeJudgements) extends BottomUpVisitor {
 
   val temporalTypes: Set[NewCypherType] = Set(DateType, TimeType, DateTimeType, LocalDateTimeType, LocalTimeType)
 

@@ -27,9 +27,8 @@ class TypeChecker(typeExpectations: TypeExpectations, typeJudgements: TypeJudgem
     case e: Expression =>
       val expected: TypeInfo = typeExpectations.get(e.id)
       val judged: TypeInfo = typeJudgements.get(e.id)
-      val overlap = expected.possible intersect judged.possible
 
-      if(overlap.isEmpty) {
+      if(!(expected isSatisfiedBy(judged))) {
         // Uh-oh... Let's check if coercions are possible
         throw new TypeExpectationsNotMetException(expected, judged, e)
       }

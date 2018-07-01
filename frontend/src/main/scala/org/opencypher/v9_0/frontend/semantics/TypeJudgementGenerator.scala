@@ -167,7 +167,12 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case x: ContainerIndex => ???
 
       // MAPS
-      case x: MapExpression => ???
+      case x: MapExpression =>
+        val childrenTypes = x.items.flatMap {
+          case (_, child) =>
+            types.get(child.id).possible
+        }
+        setNotNullable(x, MapType(childrenTypes.toSet))
       case x: MapProjection => ???
       case x: LiteralEntry => ???
       case x: VariableSelector => ???

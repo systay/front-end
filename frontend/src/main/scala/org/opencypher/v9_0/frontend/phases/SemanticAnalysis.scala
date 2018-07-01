@@ -42,10 +42,11 @@ case class SemanticAnalysis(warn: Boolean, features: SemanticFeature*)
     val expectations = new TypeExpectations
     val scoping = new Scoper(scopes)
     val binding = new VariableBinder(bindings, scopes)
-    val types = new TypeJudgements()
-    val typeExpectationsGenerator = new TypeExpectationsGenerator(expectations, types)
-    val typeJudgements = new TypeJudgementGenerator(types, new BindingsLookup(from.statement(), bindings), expectations)
-    val semanticAnalyser = new TreeWalker(scoping, binding, typeExpectationsGenerator, typeJudgements)
+    val judgements = new TypeJudgements()
+    val typeExpectationsPt1 = new TypeExpectationsGenerator(expectations, judgements)
+    val typeJudgementGen = new TypeJudgementGenerator(judgements, new BindingsLookup(from.statement(), bindings), expectations)
+    val typeExpectationsPt2 = new TypeExpectationsAfterJudgements(expectations, judgements)
+    val semanticAnalyser = new TreeWalker(scoping, binding, typeExpectationsPt1, typeJudgementGen)
 
     semanticAnalyser.visit(from.statement())
 

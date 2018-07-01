@@ -15,37 +15,9 @@
  */
 package org.opencypher.v9_0.frontend.semantics
 
-import org.opencypher.v9_0.frontend.semantics.Types.NewCypherType
+import org.opencypher.v9_0.frontend.semantics.Types.{ListType, MapType, NewCypherType}
 
 object Types {
-
-  sealed trait NewCypherType {
-    def isList = false
-    def isMap = false
-  }
-
-  case class ListType(inner: Set[NewCypherType]) extends NewCypherType {
-    override def toString: String = s"List[${inner.mkString(",")}]"
-
-    /**
-      * Instead of grabbing the inner field directly, use this method,
-      * that will expand List[?] to any valid inner type
-      * @return
-      */
-    def elementTypes: Set[NewCypherType] =
-      if (inner.size == 1 && inner.head == ?)
-        ???
-      else
-        inner
-
-    override def isList: Boolean = true
-  }
-
-  case class MapType(possibleTypes: Set[NewCypherType]) extends NewCypherType {
-    override def toString: String = s"Map[${possibleTypes.mkString(",")}]"
-
-    override def isMap: Boolean = true
-  }
 
   val ANY: Set[NewCypherType] = Set(
     ListType.ListOfUnknown,
@@ -67,6 +39,36 @@ object Types {
     LocalTimeType,
     DurationType
   )
+
+  sealed trait NewCypherType {
+    def isList = false
+
+    def isMap = false
+  }
+
+  case class ListType(inner: Set[NewCypherType]) extends NewCypherType {
+    override def toString: String = s"List[${inner.mkString(",")}]"
+
+    /**
+      * Instead of grabbing the inner field directly, use this method,
+      * that will expand List[?] to any valid inner type
+      *
+      * @return
+      */
+    def elementTypes: Set[NewCypherType] =
+      if (inner.size == 1 && inner.head == ?)
+        ???
+      else
+        inner
+
+    override def isList: Boolean = true
+  }
+
+  case class MapType(possibleTypes: Set[NewCypherType]) extends NewCypherType {
+    override def toString: String = s"Map[${possibleTypes.mkString(",")}]"
+
+    override def isMap: Boolean = true
+  }
 
   case object IntegerType extends NewCypherType
   case object StringType extends NewCypherType
@@ -102,14 +104,66 @@ object Types {
 
     def apply(t: NewCypherType*): MapType = MapType(t.toSet)
   }
+
 }
 
 // TypeInfo contains both the set of possibles types and whether it is nullable or not.
 class TypeInfo(val possible: Set[NewCypherType], val nullable: Boolean) {
-  def containsAnyOf(types: NewCypherType*): Boolean = (possible intersect (types.toSet)).nonEmpty
-  def containsAny(typ: Set[NewCypherType]): Boolean = (possible intersect typ).nonEmpty
+  /**
+    * Used to check if this TypeInfo, when seen as an expectaion, could work with an expression
+    * judged to have the type @judgement.
+    *
+    * @param judgement The types to check
+    * @return
+    */
+  def isSatisfiedBy(judgement: TypeInfo): Boolean = {
+    val acceptableWithCheckingLists = (this.possible intersect judgement.possible).nonEmpty
+    if (acceptableWithCheckingLists)
+      true
+    else {
+      val lhs = normalize()
+      val rhs = judgement.normalize()
 
-  def canEqual(other: Any): Boolean = other.isInstanceOf[TypeInfo]
+      // If normalization changed anything, let's check with the normalized types
+      if (lhs != this || rhs != judgement)
+        lhs isSatisfiedBy rhs
+      else {
+        // As a last ditch - let's check for the ? type
+        (possible.contains(ListType.ListOfUnknown) && judgement.possible.exists(_.isList)) ||
+        (possible.contains(MapType.MapOfUnknown) && judgement.possible.exists(_.isMap))
+      }
+    }
+  }
+
+  /**
+    * Normalization of TypeInfo means that all generic types are turned into single generic type.
+    *
+    * (List[(Int, String)]) => (List[(Int)], List[(String)]
+    *
+    * The two are equivalent forms, but the right version is easier to work with.
+    *
+    * @return
+    */
+  private def normalize(): TypeInfo = {
+
+    def setMap(in: Set[NewCypherType]): Set[NewCypherType] = in flatMap {
+      case ListType(inner) if inner.size > 1 =>
+        val innerUnpacked = setMap(inner)
+        innerUnpacked.map(i => ListType(Set(i)))
+      case ListType(inner) => Some(ListType(setMap(inner)))
+      case MapType(inner) if inner.size > 1 =>
+        val innerUnpacked = setMap(inner)
+        innerUnpacked.map(i => MapType(Set(i)))
+      case MapType(inner) => Some(MapType(setMap(inner)))
+      case x => Some(x)
+    }
+
+    new TypeInfo(setMap(possible), nullable)
+  }
+
+  def containsAnyOf(types: NewCypherType*): Boolean = (possible intersect (types.toSet)).nonEmpty
+
+  def containsAny(typ: Set[NewCypherType]): Boolean = (possible intersect typ).nonEmpty
 
   override def equals(other: Any): Boolean = other match {
     case that: TypeInfo =>
@@ -118,6 +172,8 @@ class TypeInfo(val possible: Set[NewCypherType], val nullable: Boolean) {
         nullable == that.nullable
     case _ => false
   }
+
+  def canEqual(other: Any): Boolean = other.isInstanceOf[TypeInfo]
 
   override def hashCode(): Int = possible.hashCode() + 31 * nullable.hashCode()
 
