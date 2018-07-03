@@ -24,16 +24,20 @@ import org.opencypher.v9_0.util.ASTNode
   */
 class TypeChecker(typeExpectations: TypeExpectations, typeJudgements: TypeJudgements) extends BottomUpVisitor {
   override def visit(node: ASTNode): Unit = node match {
-    case e: Expression =>
+    case e: Expression => try {
       val expected: TypeInfo = typeExpectations.get(e.id)
       val judged: TypeInfo = typeJudgements.get(e.id)
 
-      if(!(expected isSatisfiedBy(judged))) {
-        // Uh-oh... Let's check if coercions are possible
+      if (!(expected isSatisfiedBy (judged))) {
+        // Uh-oh... TODO: Let's check if coercions are possible
         throw new TypeExpectationsNotMetException(expected, judged, e)
       }
-
-
+    } catch {
+      case t: IndexOutOfBoundsException =>
+        throw new RuntimeException(s"Type judgement or expectation was missing for: $e", t)
+      case t: Exception =>
+        throw new RuntimeException(s"Something went wrong on the way to heaven: \n$e", t)
+    }
     case _ =>
   }
 }

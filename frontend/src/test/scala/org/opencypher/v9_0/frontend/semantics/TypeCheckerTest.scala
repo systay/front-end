@@ -40,4 +40,5 @@ class TypeCheckerTest extends CypherFunSuite with AstConstructionTestSupport {
     val walker = new TreeWalker(scoping, binder, expector, typer andThen typeChecker)
     intercept[TypeExpectationsNotMetException](walker.visit(where))
   }
+
 }

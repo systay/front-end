@@ -15,7 +15,7 @@
  */
 package org.opencypher.v9_0.frontend.semantics
 
-import org.opencypher.v9_0.ast.{AliasedReturnItem, Where}
+import org.opencypher.v9_0.ast.{AliasedReturnItem, UnaliasedReturnItem, Where}
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.frontend.semantics.Types._
 import org.opencypher.v9_0.util.ASTNode
@@ -76,8 +76,8 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
       case v: LogicalVariable if typeExpectFromReference.contains(v.id) =>
         set(v, types.get(typeExpectFromReference(v.id)))
 
-      case NodePattern(Some(variable), _, props, _) =>
-        props.foreach(e => set(e, NonNullableType(MapType(?))))
+      case NodePattern(variable, _, props, _) =>
+        set(props, NonNullableType(MapType(?)))
         set(variable, TypeInfo(nullable, NodeType))
 
       case RelationshipPattern(Some(variable), _, _, _, _, _ ,_) =>
@@ -92,6 +92,9 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
       case AliasedReturnItem(exp, alias) =>
         set(exp, new TypeInfo(Types.ANY, true))
         copyTypesBetween(from = exp, to = alias)
+
+      case UnaliasedReturnItem(exp, _) =>
+        set(exp, new TypeInfo(Types.ANY, true))
 
       // Expressions
       case x: Add =>

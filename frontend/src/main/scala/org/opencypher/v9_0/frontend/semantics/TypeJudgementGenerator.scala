@@ -96,7 +96,24 @@ class TypeJudgementGenerator(types: TypeJudgements,
 
         set(x, new TypeInfo(scalarTypes | listTypes, nullability))
 
-      case x: Subtract => ???
+      case x: Subtract =>
+        val lhsTypes = types.get(x.lhs.id)
+        val rhsTypes = types.get(x.rhs.id)
+
+        val possibleTypes = new TypeCalculation().
+          -->(IntegerType)  (IntegerType)           (IntegerType).
+          -->(FloatType)    (FloatType, IntegerType)(FloatType).
+          -->(DurationType) (DurationType)          (DurationType).
+          -->(DurationType) (DateType)              (DateType).
+          -->(DurationType) (TimeType)              (TimeType).
+          -->(DurationType) (DateTimeType)          (DateTimeType).
+          -->(DurationType) (LocalTimeType)         (LocalTimeType).
+          -->(DurationType) (LocalDateTimeType)     (LocalDateTimeType).
+          calculate(lhsTypes.possible, rhsTypes.possible)
+
+        val nullability = lhsTypes.nullable || rhsTypes.nullable
+        set(x, new TypeInfo(possibleTypes, nullability))
+
       case x: UnarySubtract => ???
       case x: Multiply => ???
       case x: Divide => ???
@@ -134,7 +151,8 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case x: CaseExpression => ???
       case x: AndedPropertyInequalities => ???
       case x: CoerceTo => ???
-      case x: Property => ???
+      case x: Property =>
+        set(x, NullableType(StringType, IntegerType, FloatType, BoolType, PointType, GeometryType, DateType, TimeType, LocalTimeType, DateTimeType, LocalDateTimeType, DurationType))
       case x: FunctionInvocation => ???
       case x: GetDegree => ???
       case x: Parameter => ???
@@ -148,7 +166,8 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case _: FilterScope => ???
       case _: ExtractScope => ???
       case _: ReduceScope => ???
-      case x: CountStar => ???
+      case x: CountStar =>
+        set(x, NonNullableType(IntegerType))
       case x: PathExpression => ???
       case x: ShortestPathExpression => ???
       case p: PatternExpression =>

@@ -36,6 +36,9 @@ class TreeWalker(scoping: Scoping,
                  typeExpecting: TypeExpecting,
                  bottomUpVisitor: BottomUpVisitor) {
   def visit(astRoot: ASTNode): Unit = {
+    if(DEBUG) {
+      println(TreeWithId2String.toString(astRoot))
+    }
     val todo = new mutable.ArrayStack[Move]()
     todo.push(Down(astRoot))
     val scopeForEntireQuery = new NormalScope()

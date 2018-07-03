@@ -29,25 +29,44 @@ class TckTest extends FunSpec {
         val soFar: Seq[Scenario] = acc.getOrElse(scenario.featureName, Seq.empty[Scenario])
         acc + (scenario.featureName -> (soFar :+ scenario))
     }
-  var x = 0
+  var counter = 0
 
-  scenariosPerFeature foreach {
-    case (featureName, scenarios) =>
-      describe(featureName) {
-        scenarios.foreach {
-          scenarioObj =>
-            describe(scenarioObj.name) {
-              scenarioObj.steps foreach {
-                case Execute(query, _, _) =>
-                  x = x + 1
-                  it(query + x) {
-                    testQuery(query)
-                  }
-                case _ =>
-              }
+  scenariosPerFeature foreach { case (featureName, scenarios) =>
+    describe(featureName) {
+      scenarios.foreach {
+        scenarioObj =>
+          describe(scenarioObj.name) {
+            val init: MyState = Init
+            scenarioObj.steps.foldLeft(init) {
+              case (Init, Execute(query, _, _)) =>
+                Query(query)
+
+              case (Term, _) =>
+                Term
+
+              case (Init, _) =>
+                Init
+
+              case (Query(query), ExpectError(errorType, _, _, _)) =>
+                it(s"ERROR! $query $errorType ${counter.toString}") {
+                  intercept(testQuery(query))
+                }
+                counter += 1
+                Term
+
+              case (Query(query), _: ExpectResult | _: Measure) =>
+                it(query + counter.toString) {
+                  testQuery(query)
+                }
+                counter += 1
+                Term
+
+              case (q: Query, _) =>
+                q
             }
-        }
+          }
       }
+    }
   }
 
   private def testQuery(query: String): Unit = {
@@ -67,4 +86,11 @@ class TckTest extends FunSpec {
     val walker = new TreeWalker(scoping, binder, expector, upVisitor)
     walker.visit(x.statement)
   }
+
+  trait MyState
+
+  case object Init extends MyState
+  case class Query(q: String) extends MyState
+  case object Term extends MyState
 }
+
