@@ -76,88 +76,88 @@ class AddTypeJudgementGeneratorTest extends CypherFunSuite with AstConstructionT
   }
 
   // shouldHandleAllSpecializations
-    testValidTypes(StringType, StringType)(StringType)
-    testValidTypes(StringType, IntegerType)(StringType)
-    testValidTypes(StringType, FloatType)(StringType)
-    testValidTypes(IntegerType, StringType)(StringType)
-    testValidTypes(IntegerType, IntegerType)(IntegerType)
-    testValidTypes(IntegerType, FloatType)(FloatType)
-    testValidTypes(FloatType, StringType)(StringType)
-    testValidTypes(FloatType, IntegerType)(FloatType)
-    testValidTypes(FloatType, FloatType)(FloatType)
-    testValidTypes(DurationType, DurationType)(DurationType)
-    testValidTypes(DateType, DurationType)(DateType)
-    testValidTypes(DurationType, DateType)(DateType)
-    testValidTypes(TimeType, DurationType)(TimeType)
-    testValidTypes(DurationType, TimeType)(TimeType)
-    testValidTypes(LocalTimeType, DurationType)(LocalTimeType)
-    testValidTypes(DurationType, LocalTimeType)(LocalTimeType)
-    testValidTypes(DateTimeType, DurationType)(DateTimeType)
-    testValidTypes(DurationType, DateTimeType)(DateTimeType)
-    testValidTypes(LocalDateTimeType, DurationType)(LocalDateTimeType)
-    testValidTypes(DurationType, LocalDateTimeType)(LocalDateTimeType)
+    testValidTypes(StringT, StringT)(StringT)
+    testValidTypes(StringT, IntegerT)(StringT)
+    testValidTypes(StringT, FloatT)(StringT)
+    testValidTypes(IntegerT, StringT)(StringT)
+    testValidTypes(IntegerT, IntegerT)(IntegerT)
+    testValidTypes(IntegerT, FloatT)(FloatT)
+    testValidTypes(FloatT, StringT)(StringT)
+    testValidTypes(FloatT, IntegerT)(FloatT)
+    testValidTypes(FloatT, FloatT)(FloatT)
+    testValidTypes(DurationT, DurationT)(DurationT)
+    testValidTypes(DateT, DurationT)(DateT)
+    testValidTypes(DurationT, DateT)(DateT)
+    testValidTypes(TimeT, DurationT)(TimeT)
+    testValidTypes(DurationT, TimeT)(TimeT)
+    testValidTypes(LocalTimeT, DurationT)(LocalTimeT)
+    testValidTypes(DurationT, LocalTimeT)(LocalTimeT)
+    testValidTypes(DateTimeT, DurationT)(DateTimeT)
+    testValidTypes(DurationT, DateTimeT)(DateTimeT)
+    testValidTypes(LocalDateT, DurationT)(LocalDateT)
+    testValidTypes(DurationT, LocalDateT)(LocalDateT)
 
-    testValidTypes(ListType(NodeType), ListType(NodeType))(ListType(NodeType))
-    testValidTypes(ListType(FloatType), ListType(FloatType))(ListType(FloatType))
+    testValidTypes(ListT(NodeT), ListT(NodeT))(ListT(NodeT))
+    testValidTypes(ListT(FloatT), ListT(FloatT))(ListT(FloatT))
 
-    testValidTypes(ListType(NodeType), NodeType)(ListType(NodeType))
-    testValidTypes(ListType(FloatType), FloatType)(ListType(FloatType))
+    testValidTypes(ListT(NodeT), NodeT)(ListT(NodeT))
+    testValidTypes(ListT(FloatT), FloatT)(ListT(FloatT))
 
-    testValidTypes(NodeType, ListType(NodeType))(ListType(NodeType))
-    testValidTypes(FloatType, ListType(FloatType))(ListType(FloatType))
+    testValidTypes(NodeT, ListT(NodeT))(ListT(NodeT))
+    testValidTypes(FloatT, ListT(FloatT))(ListT(FloatT))
 
-    testValidTypes(ListType(?), ListType(?))(ListType(?))
+    testValidTypes(ListT(?), ListT(?))(ListT(?))
 
 
   // shouldHandleCombinedSpecializations
-    testValidTypes(FloatType | StringType, IntegerType)(FloatType | StringType)
-    testValidTypes(FloatType | ListType(FloatType), FloatType)(FloatType | ListType(FloatType))
-    testValidTypes(FloatType, FloatType | ListType(FloatType))(FloatType | ListType(FloatType))
+    testValidTypes(FloatT | StringT, IntegerT)(FloatT | StringT)
+    testValidTypes(FloatT | ListT(FloatT), FloatT)(FloatT | ListT(FloatT))
+    testValidTypes(FloatT, FloatT | ListT(FloatT))(FloatT | ListT(FloatT))
 
   // shouldHandleCoercions
-    testValidTypes(ListType(FloatType), IntegerType)(ListType(FloatType, IntegerType))
-    testValidTypes(FloatType | ListType(FloatType), IntegerType)(FloatType | ListType(FloatType, IntegerType))
+    testValidTypes(ListT(FloatT), IntegerT)(ListT(FloatT, IntegerT))
+    testValidTypes(FloatT | ListT(FloatT), IntegerT)(FloatT | ListT(FloatT, IntegerT))
 
   // should concatenate different typed lists
-    testValidTypes(ListType(IntegerType), ListType(StringType))(ListType(IntegerType, StringType))
+    testValidTypes(ListT(IntegerT), ListT(StringT))(ListT(IntegerT, StringT))
 
   // should concatenate vector element of other type after list
-    testValidTypes(IntegerType, ListType(StringType))(ListType(IntegerType, StringType))
+    testValidTypes(IntegerT, ListT(StringT))(ListT(IntegerT, StringT))
 
   // should concatenate vector element of other type before list
-    testValidTypes(ListType(IntegerType), StringType)(ListType(IntegerType, StringType))
+    testValidTypes(ListT(IntegerT), StringT)(ListT(IntegerT, StringT))
 
   // should concatenate same typed lists
-    testValidTypes(ListType(IntegerType), ListType(IntegerType))(ListType(IntegerType))
+    testValidTypes(ListT(IntegerT), ListT(IntegerT))(ListT(IntegerT))
 
   // should concatenate nested lists
     testValidTypes(
-      ListType(ListType(IntegerType)),
-      ListType(ListType(IntegerType)))(
-      ListType(ListType(IntegerType)))
+      ListT(ListT(IntegerT)),
+      ListT(ListT(IntegerT)))(
+      ListT(ListT(IntegerT)))
     testValidTypes(
-      ListType(ListType(IntegerType)),
-      ListType(IntegerType))(
-      ListType(ListType(IntegerType), IntegerType))
+      ListT(ListT(IntegerT)),
+      ListT(IntegerT))(
+      ListT(ListT(IntegerT), IntegerT))
     testValidTypes(
-      ListType(ListType(IntegerType)),
-      IntegerType)(
-      ListType(ListType(IntegerType), IntegerType))
+      ListT(ListT(IntegerT)),
+      IntegerT)(
+      ListT(ListT(IntegerT), IntegerT))
 
   // should work with ORed types
     testValidTypes(
-      IntegerType | ListType(StringType),
-      ListType(StringType) | IntegerType)(
-      ListType(StringType) | ListType(StringType, IntegerType) | IntegerType)
+      IntegerT | ListT(StringT),
+      ListT(StringT) | IntegerT)(
+      ListT(StringT) | ListT(StringT, IntegerT) | IntegerT)
 
     testValidTypes(
-      IntegerType | ListType(IntegerType),
-      StringType)(
-      StringType | ListType(IntegerType, StringType))
+      IntegerT | ListT(IntegerT),
+      StringT)(
+      StringT | ListT(IntegerT, StringT))
 
     testValidTypes(
-      IntegerType | ListType(IntegerType),
-      BoolType)(
-      ListType(IntegerType, BoolType))
+      IntegerT | ListT(IntegerT),
+      BoolT)(
+      ListT(IntegerT, BoolT))
 }
 

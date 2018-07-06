@@ -38,7 +38,7 @@ class TypeExpectationsTest extends CypherFunSuite {
     val (expectations, statement) = parseAndAnalyse("MATCH (a) RETURN a")
 
     val declarationId = statement.findByClass[NodePattern].variable.get.id
-    expectations.get(declarationId) should equal(NonNullableType(NodeType))
+    expectations.get(declarationId) should equal(NonNullableType(NodeT))
   }
 
   test("WHERE expected predicates") {
@@ -46,8 +46,8 @@ class TypeExpectationsTest extends CypherFunSuite {
 
     val property = statement.findByClass[Property]
     val propId = property.id
-    expectations.get(propId) should equal(NullableType(BoolType))
-    expectations.get(property.map.id) should equal(NullableType(NodeType, RelationshipType, TimeType, DateType, MapType.MapOfUnknown))
+    expectations.get(propId) should equal(NullableType(BoolT))
+    expectations.get(property.map.id) should equal(NullableType(NodeT, RelationshipT, TimeT, DateT, MapT.MapOfUnknown))
   }
 
 }

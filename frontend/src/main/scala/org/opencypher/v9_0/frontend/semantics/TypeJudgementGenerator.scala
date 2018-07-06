@@ -71,25 +71,25 @@ class TypeJudgementGenerator(types: TypeJudgements,
         val rhsTypes = types.get(x.rhs.id)
 
         val scalarTypes = new TypeCalculation().
-          -->(StringType, IntegerType, FloatType)(StringType)            (StringType).
-          -->(StringType)                        (IntegerType, FloatType)(StringType).
-          -->(IntegerType)                       (IntegerType)           (IntegerType).
-          -->(FloatType)                         (FloatType, IntegerType)(FloatType).
-          -->(DurationType)                      (DurationType)          (DurationType).
-          -->(DurationType)                      (DateType)              (DateType).
-          -->(DurationType)                      (TimeType)              (TimeType).
-          -->(DurationType)                      (DateTimeType)          (DateTimeType).
-          -->(DurationType)                      (LocalTimeType)         (LocalTimeType).
-          -->(DurationType)                      (LocalDateTimeType)     (LocalDateTimeType).
+          -->(StringT, IntegerT, FloatT) (StringT)         (StringT).
+          -->(StringT)                   (IntegerT, FloatT)(StringT).
+          -->(IntegerT)                  (IntegerT)        (IntegerT).
+          -->(FloatT)                    (FloatT, IntegerT)(FloatT).
+          -->(DurationT)                 (DurationT)       (DurationT).
+          -->(DurationT)                 (DateT)           (DateT).
+          -->(DurationT)                 (TimeT)           (TimeT).
+          -->(DurationT)                 (DateTimeT)       (DateTimeT).
+          -->(DurationT)                 (LocalTimeT)      (LocalTimeT).
+          -->(DurationT)                 (LocalDateT)      (LocalDateT).
           calculate(lhsTypes.possible, rhsTypes.possible)
 
         val listTypes: Set[NewCypherType] = for {
           lhs <- lhsTypes.possible
           rhs <- rhsTypes.possible if lhs.isList || rhs.isList
         } yield (lhs, rhs) match {
-            case (ListType(leftInner), ListType(rightInner)) => ListType(leftInner ++ rightInner)
-            case (ListType(leftInner), other) => ListType(leftInner + other)
-            case (other, ListType(leftInner)) => ListType(leftInner + other)
+            case (ListT(leftInner), ListT(rightInner)) => ListT(leftInner ++ rightInner)
+            case (ListT(leftInner), other) => ListT(leftInner + other)
+            case (other, ListT(leftInner)) => ListT(leftInner + other)
           }
 
         val nullability = lhsTypes.nullable || rhsTypes.nullable
@@ -101,14 +101,14 @@ class TypeJudgementGenerator(types: TypeJudgements,
         val rhsTypes = types.get(x.rhs.id)
 
         val possibleTypes = new TypeCalculation().
-          -->(IntegerType)  (IntegerType)           (IntegerType).
-          -->(FloatType)    (FloatType, IntegerType)(FloatType).
-          -->(DurationType) (DurationType)          (DurationType).
-          -->(DurationType) (DateType)              (DateType).
-          -->(DurationType) (TimeType)              (TimeType).
-          -->(DurationType) (DateTimeType)          (DateTimeType).
-          -->(DurationType) (LocalTimeType)         (LocalTimeType).
-          -->(DurationType) (LocalDateTimeType)     (LocalDateTimeType).
+          -->(IntegerT)  (IntegerT)           (IntegerT).
+          -->(FloatT)    (FloatT, IntegerT)(FloatT).
+          -->(DurationT) (DurationT)          (DurationT).
+          -->(DurationT) (DateT)              (DateT).
+          -->(DurationT) (TimeT)              (TimeT).
+          -->(DurationT) (DateTimeT)          (DateTimeT).
+          -->(DurationT) (LocalTimeT)         (LocalTimeT).
+          -->(DurationT) (LocalDateT)     (LocalDateT).
           calculate(lhsTypes.possible, rhsTypes.possible)
 
         val nullability = lhsTypes.nullable || rhsTypes.nullable
@@ -130,7 +130,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case x: And =>
         val lhsT = types.get(x.lhs.id)
         val rhsT = types.get(x.rhs.id)
-        set(x, TypeInfo(lhsT.nullable || rhsT.nullable, BoolType))
+        set(x, TypeInfo(lhsT.nullable || rhsT.nullable, BoolT))
       case x: Or => ???
       case x: Xor => ???
       case x: Ands => ???
@@ -152,7 +152,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case x: AndedPropertyInequalities => ???
       case x: CoerceTo => ???
       case x: Property =>
-        set(x, NullableType(StringType, IntegerType, FloatType, BoolType, PointType, GeometryType, DateType, TimeType, LocalTimeType, DateTimeType, LocalDateTimeType, DurationType))
+        set(x, NullableType(StringT, IntegerT, FloatT, BoolT, PointT, GeometryT, DateT, TimeT, LocalTimeT, DateTimeT, LocalDateT, DurationT))
       case x: FunctionInvocation => ???
       case x: GetDegree => ???
       case x: Parameter => ???
@@ -167,12 +167,12 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case _: ExtractScope => ???
       case _: ReduceScope => ???
       case x: CountStar =>
-        set(x, NonNullableType(IntegerType))
+        set(x, NonNullableType(IntegerT))
       case x: PathExpression => ???
       case x: ShortestPathExpression => ???
       case p: PatternExpression =>
         // TODO: We should be able to figure if any of the variables we depend on are nullable, which makes this expression nullable
-        types.set(p.id, NullableType(ListType(PathType)))
+        types.set(p.id, NullableType(ListT(PathT)))
       case x: IterablePredicateExpression => ???
       case x: ReduceExpression => ???
       case x: ListLiteral =>
@@ -180,7 +180,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
           x.expressions.
             map(e => types.get(e.id).possible).
             reduce(_ ++ _)
-        set(x, TypeInfo(false, ListType(innerType)))
+        set(x, TypeInfo(false, ListT(innerType)))
 
       case x: ListSlice => ???
       case x: ContainerIndex => ???
@@ -191,7 +191,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
           case (_, child) =>
             types.get(child.id).possible
         }
-        setNotNullable(x, MapType(childrenTypes.toSet))
+        setNotNullable(x, MapT(childrenTypes.toSet))
       case x: MapProjection => ???
       case x: LiteralEntry => ???
       case x: VariableSelector => ???
@@ -200,13 +200,13 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case x: DesugaredMapProjection => ???
 
       // LITERALS
-      case x: DecimalIntegerLiteral => setNotNullable(x, IntegerType)
-      case x: OctalIntegerLiteral => setNotNullable(x, IntegerType)
-      case x: HexIntegerLiteral => setNotNullable(x, IntegerType)
-      case x: DecimalDoubleLiteral => setNotNullable(x, FloatType)
-      case x: StringLiteral => setNotNullable(x, StringType)
+      case x: DecimalIntegerLiteral => setNotNullable(x, IntegerT)
+      case x: OctalIntegerLiteral => setNotNullable(x, IntegerT)
+      case x: HexIntegerLiteral => setNotNullable(x, IntegerT)
+      case x: DecimalDoubleLiteral => setNotNullable(x, FloatT)
+      case x: StringLiteral => setNotNullable(x, StringT)
       case x: Null => set(x, NullableType(ANY.toSeq: _*))
-      case x: BooleanLiteral => setNotNullable(x, BoolType)
+      case x: BooleanLiteral => setNotNullable(x, BoolT)
       case x: SemanticCheckableExpression => ???
       case _ => ???
     }

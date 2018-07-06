@@ -15,29 +15,29 @@
  */
 package org.opencypher.v9_0.frontend.semantics
 
-import org.opencypher.v9_0.frontend.semantics.Types.{ListType, MapType, NewCypherType}
+import org.opencypher.v9_0.frontend.semantics.Types.{ListT, MapT, NewCypherType}
 
 object Types {
 
   val ANY: Set[NewCypherType] = Set(
-    ListType.ListOfUnknown,
-    MapType.MapOfUnknown,
-    IntegerType,
-    StringType,
-    FloatType,
-    BoolType,
-    NodeType,
-    RelationshipType,
-    PointType,
-    GeometryType,
-    PathType,
-    GraphRefType,
-    DateType,
-    TimeType,
-    DateTimeType,
-    LocalDateTimeType,
-    LocalTimeType,
-    DurationType
+    ListT.ListOfUnknown,
+    MapT.MapOfUnknown,
+    IntegerT,
+    StringT,
+    FloatT,
+    BoolT,
+    NodeT,
+    RelationshipT,
+    PointT,
+    GeometryT,
+    PathT,
+    GraphRefT,
+    DateT,
+    TimeT,
+    DateTimeT,
+    LocalDateT,
+    LocalTimeT,
+    DurationT
   )
 
   sealed trait NewCypherType {
@@ -46,7 +46,7 @@ object Types {
     def isMap = false
   }
 
-  case class ListType(inner: Set[NewCypherType]) extends NewCypherType {
+  case class ListT(inner: Set[NewCypherType]) extends NewCypherType {
     override def toString: String = s"List[${inner.mkString(",")}]"
 
     /**
@@ -64,28 +64,28 @@ object Types {
     override def isList: Boolean = true
   }
 
-  case class MapType(possibleTypes: Set[NewCypherType]) extends NewCypherType {
+  case class MapT(possibleTypes: Set[NewCypherType]) extends NewCypherType {
     override def toString: String = s"Map[${possibleTypes.mkString(",")}]"
 
     override def isMap: Boolean = true
   }
 
-  case object IntegerType extends NewCypherType
-  case object StringType extends NewCypherType
-  case object FloatType extends NewCypherType
-  case object BoolType extends NewCypherType
-  case object NodeType extends NewCypherType
-  case object RelationshipType extends NewCypherType
-  case object PointType extends NewCypherType
-  case object GeometryType extends NewCypherType
-  case object PathType extends NewCypherType
-  case object GraphRefType extends NewCypherType
-  case object DateType extends NewCypherType
-  case object TimeType extends NewCypherType
-  case object DateTimeType extends NewCypherType
-  case object LocalDateTimeType extends NewCypherType
-  case object LocalTimeType extends NewCypherType
-  case object DurationType extends NewCypherType
+  case object IntegerT extends NewCypherType
+  case object StringT extends NewCypherType
+  case object FloatT extends NewCypherType
+  case object BoolT extends NewCypherType
+  case object NodeT extends NewCypherType
+  case object RelationshipT extends NewCypherType
+  case object PointT extends NewCypherType
+  case object GeometryT extends NewCypherType
+  case object PathT extends NewCypherType
+  case object GraphRefT extends NewCypherType
+  case object DateT extends NewCypherType
+  case object TimeT extends NewCypherType
+  case object DateTimeT extends NewCypherType
+  case object LocalDateT extends NewCypherType
+  case object LocalTimeT extends NewCypherType
+  case object DurationT extends NewCypherType
 
 
   // This special type is used to stop type possibility explosion -
@@ -93,16 +93,16 @@ object Types {
   // Instead, we model these using List[
   case object ? extends NewCypherType
 
-  object ListType {
-    val ListOfUnknown = ListType(?)
+  object ListT {
+    val ListOfUnknown = ListT(?)
 
-    def apply(t: NewCypherType*): ListType = ListType(t.toSet)
+    def apply(t: NewCypherType*): ListT = ListT(t.toSet)
   }
 
-  object MapType {
-    val MapOfUnknown = MapType(?)
+  object MapT {
+    val MapOfUnknown = MapT(?)
 
-    def apply(t: NewCypherType*): MapType = MapType(t.toSet)
+    def apply(t: NewCypherType*): MapT = MapT(t.toSet)
   }
 
 }
@@ -129,8 +129,8 @@ class TypeInfo(val possible: Set[NewCypherType], val nullable: Boolean) {
         lhs isSatisfiedBy rhs
       else {
         // As a last ditch - let's check for the ? type
-        (possible.contains(ListType.ListOfUnknown) && judgement.possible.exists(_.isList)) ||
-        (possible.contains(MapType.MapOfUnknown) && judgement.possible.exists(_.isMap))
+        (possible.contains(ListT.ListOfUnknown) && judgement.possible.exists(_.isList)) ||
+        (possible.contains(MapT.MapOfUnknown) && judgement.possible.exists(_.isMap))
       }
     }
   }
@@ -147,14 +147,14 @@ class TypeInfo(val possible: Set[NewCypherType], val nullable: Boolean) {
   private def normalize(): TypeInfo = {
 
     def setMap(in: Set[NewCypherType]): Set[NewCypherType] = in flatMap {
-      case ListType(inner) if inner.size > 1 =>
+      case ListT(inner) if inner.size > 1 =>
         val innerUnpacked = setMap(inner)
-        innerUnpacked.map(i => ListType(Set(i)))
-      case ListType(inner) => Some(ListType(setMap(inner)))
-      case MapType(inner) if inner.size > 1 =>
+        innerUnpacked.map(i => ListT(Set(i)))
+      case ListT(inner) => Some(ListT(setMap(inner)))
+      case MapT(inner) if inner.size > 1 =>
         val innerUnpacked = setMap(inner)
-        innerUnpacked.map(i => MapType(Set(i)))
-      case MapType(inner) => Some(MapType(setMap(inner)))
+        innerUnpacked.map(i => MapT(Set(i)))
+      case MapT(inner) => Some(MapT(setMap(inner)))
       case x => Some(x)
     }
 

@@ -40,16 +40,16 @@ import scala.collection.mutable
   */
 class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJudgements) extends TypeExpecting {
   private val bool =
-    NullableType(BoolType)
+    NullableType(BoolT)
 
   private val noExpectations =
     NullableType(ANY.toSeq: _*)
 
   private val numbers =
-    NullableType(IntegerType, FloatType)
+    NullableType(IntegerT, FloatT)
 
   private val mappable =
-    NullableType(NodeType, RelationshipType, DateType, TimeType, MapType.MapOfUnknown)
+    NullableType(NodeT, RelationshipT, DateT, TimeT, MapT.MapOfUnknown)
 
   // When going down the tree, we might know that one of our children is expected
   // to have the same type as a different child. Since children have been yet to be
@@ -77,14 +77,14 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
         set(v, types.get(typeExpectFromReference(v.id)))
 
       case NodePattern(variable, _, props, _) =>
-        set(props, NonNullableType(MapType(?)))
-        set(variable, TypeInfo(nullable, NodeType))
+        set(props, NonNullableType(MapT(?)))
+        set(variable, TypeInfo(nullable, NodeT))
 
       case RelationshipPattern(Some(variable), _, _, _, _, _ ,_) =>
-        set(variable, TypeInfo(nullable, RelationshipType))
+        set(variable, TypeInfo(nullable, RelationshipT))
 
       case NamedPatternPart(variable, _) =>
-        set(variable, TypeInfo(nullable, PathType))
+        set(variable, TypeInfo(nullable, PathT))
 
       case where: Where =>
         set(where.expression, bool)
@@ -99,7 +99,7 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
       // Expressions
       case x: Add =>
         // For `+`, we have to redo type expectations when we know the type of lhs
-        val typeInfo = NullableType(ListType.ListOfUnknown, IntegerType, StringType, FloatType, DateType, TimeType, DurationType, LocalDateTimeType, LocalTimeType, DateTimeType)
+        val typeInfo = NullableType(ListT.ListOfUnknown, IntegerT, StringT, FloatT, DateT, TimeT, DurationT, LocalDateT, LocalTimeT, DateTimeT)
         set(x.lhs, typeInfo)
         set(x.rhs, typeInfo)
 
@@ -142,7 +142,7 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
 
       case x: In =>
         set(x.lhs, noExpectations)
-        set(x.lhs, NullableType(ListType.ListOfUnknown))
+        set(x.lhs, NullableType(ListT.ListOfUnknown))
 
       case x: BinaryOperatorExpression
         if x.isInstanceOf[And] ||
@@ -157,8 +157,8 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
            x.isInstanceOf[EndsWith] ||
            x.isInstanceOf[RegexMatch] ||
            x.isInstanceOf[Contains] =>
-        set(x.lhs, NullableType(StringType))
-        set(x.rhs, NullableType(StringType))
+        set(x.lhs, NullableType(StringT))
+        set(x.rhs, NullableType(StringT))
 
       // isNULL and isNOTNULL
       case x: RightUnaryOperatorExpression =>
@@ -166,8 +166,8 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
 
       // > or < or <= or >=
       case x: InequalityExpression =>
-        set(x.lhs, NullableType(IntegerType, StringType, FloatType, DateType, TimeType, BoolType))
-        set(x.rhs, NullableType(IntegerType, StringType, FloatType, DateType, TimeType, BoolType))
+        set(x.lhs, NullableType(IntegerT, StringT, FloatT, DateT, TimeT, BoolT))
+        set(x.rhs, NullableType(IntegerT, StringT, FloatT, DateT, TimeT, BoolT))
 
       case x: CaseExpression if x.expression.nonEmpty =>
         x.alternatives.foreach { case (condition, result) =>
@@ -188,42 +188,42 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
         set(x.args, noExpectations)
 
       case x: GetDegree =>
-        set(x.node, NullableType(NodeType))
+        set(x.node, NullableType(NodeT))
 
       case x: HasLabels =>
-        set(x.expression, NullableType(NodeType))
+        set(x.expression, NullableType(NodeT))
 
       // ITERABLES
       case x: FilterExpression =>
-        set(x.expression, NullableType(ListType.ListOfUnknown))
+        set(x.expression, NullableType(ListT.ListOfUnknown))
         set(x.scope.innerPredicate, bool)
 
       case x: ExtractExpression =>
-        set(x.expression, NullableType(ListType.ListOfUnknown))
+        set(x.expression, NullableType(ListT.ListOfUnknown))
         set(x.scope.innerPredicate, bool)
 
       case x: ListComprehension =>
-        set(x.expression, NullableType(ListType.ListOfUnknown))
+        set(x.expression, NullableType(ListT.ListOfUnknown))
         set(x.scope.innerPredicate, bool)
 
       case x: IterablePredicateExpression =>
-        set(x.expression, NullableType(ListType.ListOfUnknown))
+        set(x.expression, NullableType(ListT.ListOfUnknown))
         set(x.scope.innerPredicate, bool)
 
       case x: ReduceExpression =>
-        set(x.list, NullableType(ListType.ListOfUnknown))
+        set(x.list, NullableType(ListT.ListOfUnknown))
 
       case x: ListLiteral =>
         set(x.expressions, noExpectations)
 
       case x: ListSlice =>
-        set(x.list, NullableType(ListType.ListOfUnknown))
-        set(x.from, NonNullableType(IntegerType))
-        set(x.to, NonNullableType(IntegerType))
+        set(x.list, NullableType(ListT.ListOfUnknown))
+        set(x.from, NonNullableType(IntegerT))
+        set(x.to, NonNullableType(IntegerT))
 
       case x: ContainerIndex =>
         set(x.expr, mappable)
-        set(x.idx, NonNullableType(StringType))
+        set(x.idx, NonNullableType(StringT))
 
       // MAPS
 
@@ -252,7 +252,7 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
 
 class TypeExpectationsAfterJudgements(typeExpectations: TypeExpectations, typeJudgements: TypeJudgements) extends BottomUpVisitor {
 
-  val temporalTypes: Set[NewCypherType] = Set(DateType, TimeType, DateTimeType, LocalDateTimeType, LocalTimeType)
+  val temporalTypes: Set[NewCypherType] = Set(DateT, TimeT, DateTimeT, LocalDateT, LocalTimeT)
 
   override def visit(e: ASTNode): Unit = e match {
     case Add(lhs, rhs) =>
@@ -274,19 +274,19 @@ class TypeExpectationsAfterJudgements(typeExpectations: TypeExpectations, typeJu
       // Duration + T => T
       // Duration + Duration => Duration
       val valueTypes: Set[NewCypherType] =
-        if (lhsType containsAnyOf(StringType, IntegerType, FloatType))
-          Set(StringType, IntegerType, FloatType)
+        if (lhsType containsAnyOf(StringT, IntegerT, FloatT))
+          Set(StringT, IntegerT, FloatT)
         else
           Set.empty
 
       val temporalExpectations =
         if (lhsType containsAny temporalTypes)
-          Set(DurationType)
+          Set(DurationT)
         else
           Set.empty
 
       val durationTypes =
-        if (lhsType containsAnyOf DurationType)
+        if (lhsType containsAnyOf DurationT)
           temporalTypes
         else
           Set.empty
@@ -294,7 +294,7 @@ class TypeExpectationsAfterJudgements(typeExpectations: TypeExpectations, typeJu
       // [a] + [b] => [a, b]
       // [a] + b => [a, b]
       // a + [b] => [a, b]
-      val listTypes = Set(ListType.ListOfUnknown)
+      val listTypes = Set(ListT.ListOfUnknown)
 
       val totalExpectations = valueTypes ++ temporalExpectations ++ durationTypes ++ listTypes
 

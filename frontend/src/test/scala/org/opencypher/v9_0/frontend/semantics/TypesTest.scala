@@ -15,92 +15,92 @@
  */
 package org.opencypher.v9_0.frontend.semantics
 
-import org.opencypher.v9_0.frontend.semantics.Types.{IntegerType, ListType, MapType, StringType}
+import org.opencypher.v9_0.frontend.semantics.Types.{IntegerT, ListT, MapT, StringT}
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
 class TypesTest extends CypherFunSuite {
 
   test("List(A) is satisfied by List(A)") {
-    val expectation = new TypeInfo(Set(ListType(IntegerType, StringType)), false)
-    val judgment = new TypeInfo(Set(ListType(IntegerType, StringType)), false)
+    val expectation = new TypeInfo(Set(ListT(IntegerT, StringT)), false)
+    val judgment = new TypeInfo(Set(ListT(IntegerT, StringT)), false)
     (expectation isSatisfiedBy judgment) should equal(true)
   }
 
   test("List(List((A,B) is satisfied by List(List(A))") {
-    val expectation = new TypeInfo(Set(ListType(ListType(IntegerType, StringType))), false)
-    val judgment = new TypeInfo(Set(ListType(ListType(IntegerType))), false)
+    val expectation = new TypeInfo(Set(ListT(ListT(IntegerT, StringT))), false)
+    val judgment = new TypeInfo(Set(ListT(ListT(IntegerT))), false)
     (expectation isSatisfiedBy judgment) should equal(true)
   }
 
   test("List(A) is not satisfied by List(B)") {
-    val expectation = new TypeInfo(Set(ListType(IntegerType)), false)
-    val judgment = new TypeInfo(Set(ListType(StringType)), false)
+    val expectation = new TypeInfo(Set(ListT(IntegerT)), false)
+    val judgment = new TypeInfo(Set(ListT(StringT)), false)
     (expectation isSatisfiedBy judgment) should equal(false)
   }
 
   test("List(?) is satisfied by List(B)") {
-    val expectation = new TypeInfo(Set(ListType.ListOfUnknown), false)
-    val judgment = new TypeInfo(Set(ListType(StringType)), false)
+    val expectation = new TypeInfo(Set(ListT.ListOfUnknown), false)
+    val judgment = new TypeInfo(Set(ListT(StringT)), false)
     (expectation isSatisfiedBy judgment) should equal(true)
   }
 
   test("List(A,B) is satisfied by List(A)") {
-    val expectation = new TypeInfo(Set(ListType(IntegerType, StringType)), false)
-    val judgement = new TypeInfo(Set(ListType(IntegerType)), false)
+    val expectation = new TypeInfo(Set(ListT(IntegerT, StringT)), false)
+    val judgement = new TypeInfo(Set(ListT(IntegerT)), false)
     (expectation isSatisfiedBy judgement) should equal(true)
   }
 
   test("(A) is satisfied by (A)") {
-    val expectation = new TypeInfo(Set(StringType), false)
-    val judgement = new TypeInfo(Set(StringType), false)
+    val expectation = new TypeInfo(Set(StringT), false)
+    val judgement = new TypeInfo(Set(StringT), false)
     (expectation isSatisfiedBy judgement) should equal(true)
   }
 
   test("(B) is not satisfied by (A)") {
-    val expectation = new TypeInfo(Set(IntegerType), false)
-    val judgement = new TypeInfo(Set(StringType), false)
+    val expectation = new TypeInfo(Set(IntegerT), false)
+    val judgement = new TypeInfo(Set(StringT), false)
     (expectation isSatisfiedBy judgement) should equal(false)
   }
 
   test("(A) is satisfied by (A, B)") {
-    val expectation = new TypeInfo(Set(StringType), false)
-    val judgement = new TypeInfo(Set(StringType, IntegerType), false)
+    val expectation = new TypeInfo(Set(StringT), false)
+    val judgement = new TypeInfo(Set(StringT, IntegerT), false)
     (expectation isSatisfiedBy judgement) should equal(true)
   }
 
   test("(A, B) is satisfied by (A)") {
-    val expectation = new TypeInfo(Set(StringType, IntegerType), false)
-    val judgement = new TypeInfo(Set(StringType), false)
+    val expectation = new TypeInfo(Set(StringT, IntegerT), false)
+    val judgement = new TypeInfo(Set(StringT), false)
     (expectation isSatisfiedBy judgement) should equal(true)
   }
 
   test("Map(A) is satisfied by Map(A)") {
-    val expectation = new TypeInfo(Set(MapType(IntegerType, StringType)), false)
-    val judgment = new TypeInfo(Set(MapType(IntegerType, StringType)), false)
+    val expectation = new TypeInfo(Set(MapT(IntegerT, StringT)), false)
+    val judgment = new TypeInfo(Set(MapT(IntegerT, StringT)), false)
     (expectation isSatisfiedBy judgment) should equal(true)
   }
 
   test("Map((A,B) is satisfied by Map(A))") {
-    val expectation = new TypeInfo(Set(MapType(MapType(IntegerType, StringType))), false)
-    val judgment = new TypeInfo(Set(MapType(MapType(IntegerType))), false)
+    val expectation = new TypeInfo(Set(MapT(MapT(IntegerT, StringT))), false)
+    val judgment = new TypeInfo(Set(MapT(MapT(IntegerT))), false)
     (expectation isSatisfiedBy judgment) should equal(true)
   }
 
   test("Map(A) is not satisfied by Map(B)") {
-    val expectation = new TypeInfo(Set(MapType(IntegerType)), false)
-    val judgment = new TypeInfo(Set(MapType(StringType)), false)
+    val expectation = new TypeInfo(Set(MapT(IntegerT)), false)
+    val judgment = new TypeInfo(Set(MapT(StringT)), false)
     (expectation isSatisfiedBy judgment) should equal(false)
   }
 
   test("Map(?) is satisfied by Map(B)") {
-    val expectation = new TypeInfo(Set(MapType.MapOfUnknown), false)
-    val judgment = new TypeInfo(Set(MapType(StringType)), false)
+    val expectation = new TypeInfo(Set(MapT.MapOfUnknown), false)
+    val judgment = new TypeInfo(Set(MapT(StringT)), false)
     (expectation isSatisfiedBy judgment) should equal(true)
   }
 
   test("Map(A,B) is satisfied by Map(A)") {
-    val expectation = new TypeInfo(Set(MapType(IntegerType, StringType)), false)
-    val judgement = new TypeInfo(Set(MapType(IntegerType)), false)
+    val expectation = new TypeInfo(Set(MapT(IntegerT, StringT)), false)
+    val judgement = new TypeInfo(Set(MapT(IntegerT)), false)
     (expectation isSatisfiedBy judgement) should equal(true)
   }
 
