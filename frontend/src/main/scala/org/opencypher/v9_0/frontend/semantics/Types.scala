@@ -49,18 +49,6 @@ object Types {
   case class ListT(inner: Set[NewCypherType]) extends NewCypherType {
     override def toString: String = s"List[${inner.mkString(",")}]"
 
-    /**
-      * Instead of grabbing the inner field directly, use this method,
-      * that will expand List[?] to any valid inner type
-      *
-      * @return
-      */
-    def elementTypes: Set[NewCypherType] =
-      if (inner.size == 1 && inner.head == ?)
-        ???
-      else
-        inner
-
     override def isList: Boolean = true
   }
 
