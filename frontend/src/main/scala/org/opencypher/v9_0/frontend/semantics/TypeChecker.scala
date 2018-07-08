@@ -17,6 +17,7 @@ package org.opencypher.v9_0.frontend.semantics
 
 import org.opencypher.v9_0.expressions.Expression
 import org.opencypher.v9_0.util.ASTNode
+import org.opencypher.v9_0.util.attribution.Attribute
 
 /**
   * This class checks whether type expectations and judgements align well enough to so that executing the query makes sense.
@@ -24,20 +25,24 @@ import org.opencypher.v9_0.util.ASTNode
   */
 class TypeChecker(typeExpectations: TypeExpectations, typeJudgements: TypeJudgements) extends BottomUpVisitor {
   override def visit(node: ASTNode): Unit = node match {
-    case e: Expression => try {
-      val expected: TypeInfo = typeExpectations.get(e.id)
-      val judged: TypeInfo = typeJudgements.get(e.id)
+    case e: Expression =>
+      val expected: TypeInfo = getTypeOf(e, typeExpectations)
+      val judged: TypeInfo = getTypeOf(e, typeJudgements)
 
-      if (!(expected isSatisfiedBy (judged))) {
+      if (!(expected isSatisfiedBy judged)) {
         // Uh-oh... TODO: Let's check if coercions are possible
         throw new TypeExpectationsNotMetException(expected, judged, e)
       }
-    } catch {
-      case t: IndexOutOfBoundsException =>
-        throw new RuntimeException(s"Type judgement or expectation was missing for: $e", t)
-      case t: Exception =>
-        throw new RuntimeException(s"Something went wrong on the way to heaven: \n$e", t)
-    }
+
     case _ =>
   }
+
+  private def getTypeOf(e: Expression, typeAttribute: Attribute[TypeInfo]): TypeInfo = try typeAttribute.get(e.id)
+  catch {
+    case t: IndexOutOfBoundsException =>
+      throw new RuntimeException(s"Type judgement or expectation was missing for: $e", t)
+    case t: Exception =>
+      throw new RuntimeException(s"Something went wrong on the way to heaven: \n$e", t)
+  }
+
 }
