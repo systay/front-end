@@ -17,6 +17,7 @@ package org.opencypher.v9_0.frontend.semantics
 
 import org.opencypher.v9_0.ast.semantics.SemanticCheckableExpression
 import org.opencypher.v9_0.expressions._
+import org.opencypher.v9_0.expressions.functions.Labels
 import org.opencypher.v9_0.frontend.semantics.Types._
 import org.opencypher.v9_0.util.attribution.Attribute
 import org.opencypher.v9_0.util.{ASTNode, InternalException}
@@ -155,7 +156,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case x: CoerceTo => ???
       case x: Property =>
         set(x, NullableType(StringT, IntegerT, FloatT, BoolT, PointT, GeometryT, DateT, TimeT, LocalTimeT, DateTimeT, LocalDateT, DurationT))
-      case x: FunctionInvocation => ???
+      case x: FunctionInvocation => judgeFunctionInvocation(x)
       case x: GetDegree => ???
       case x: Parameter => ???
       case x: HasLabels => ???
@@ -209,6 +210,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case x: StringLiteral => setNotNullable(x, StringT)
       case x: Null => set(x, NullableType(ANY.toSeq: _*))
       case x: BooleanLiteral => setNotNullable(x, BoolT)
+
       case x: SemanticCheckableExpression => ???
       case _ => ???
     }
@@ -216,6 +218,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
     case error: Exception =>
       throw new InternalException(s"Failed when trying to type id: ${e.id} $e \n$error", error)
   }
+
   private def set(e: Expression, typeInfo: TypeInfo): Unit = {
     types.set(e.id, typeInfo)
   }
@@ -226,7 +229,13 @@ class TypeJudgementGenerator(types: TypeJudgements,
   private def setNullable(e: Expression, calculatedTypes: NewCypherType*): Unit =
     set(e, new TypeInfo(calculatedTypes.toSet, true))
 
-
+  private def judgeFunctionInvocation(invocation: FunctionInvocation): Unit = invocation.function match {
+    case Labels =>
+      val argument = invocation.args.head
+      val nullable = types.get(argument.id).nullable
+      set(invocation, TypeInfo(nullable, ListT(StringT)))
+    case _ => ???
+  }
 }
 
 class TypeJudgements extends Attribute[TypeInfo]
