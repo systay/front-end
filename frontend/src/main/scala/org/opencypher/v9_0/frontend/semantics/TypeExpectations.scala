@@ -15,7 +15,7 @@
  */
 package org.opencypher.v9_0.frontend.semantics
 
-import org.opencypher.v9_0.ast.{AliasedReturnItem, UnaliasedReturnItem, Where}
+import org.opencypher.v9_0.ast.{AliasedReturnItem, UnaliasedReturnItem, Unwind, Where}
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.frontend.semantics.Types._
 import org.opencypher.v9_0.util.ASTNode
@@ -80,7 +80,8 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
         set(props, NonNullableType(MapT(?)))
         set(variable, TypeInfo(nullable, NodeT))
 
-      case RelationshipPattern(Some(variable), _, _, _, _, _ ,_) =>
+      case RelationshipPattern(Some(variable), _, _, props, _, _ ,_) =>
+        set(props, NonNullableType(MapT(?)))
         set(variable, TypeInfo(nullable, RelationshipT))
 
       case NamedPatternPart(variable, _) =>
@@ -88,6 +89,9 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
 
       case where: Where =>
         set(where.expression, bool)
+
+      case unwind: Unwind =>
+        set(unwind.expression, NullableType(ListT.ListOfUnknown))
 
       case AliasedReturnItem(exp, alias) =>
         set(exp, new TypeInfo(Types.ANY, true))

@@ -41,6 +41,20 @@ class TypeExpectationsTest extends CypherFunSuite {
     expectations.get(declarationId) should equal(NonNullableType(NodeT))
   }
 
+  test("Nodes expect maps as properties") {
+    val (expectations, statement) = parseAndAnalyse("MATCH (a {id: 42}) RETURN a")
+
+    val map = statement.findByClass[MapExpression].id
+    expectations.get(map) should equal(NonNullableType(MapT.MapOfUnknown))
+  }
+
+  test("Relationships expect maps as properties") {
+    val (expectations, statement) = parseAndAnalyse("MATCH ()-[r {id: 42}]-() RETURN r")
+
+    val map = statement.findByClass[MapExpression].id
+    expectations.get(map) should equal(NonNullableType(MapT.MapOfUnknown))
+  }
+
   test("WHERE expected predicates") {
     val (expectations, statement) = parseAndAnalyse("MATCH (a) WHERE a.prop RETURN a")
 
@@ -48,6 +62,13 @@ class TypeExpectationsTest extends CypherFunSuite {
     val propId = property.id
     expectations.get(propId) should equal(NullableType(BoolT))
     expectations.get(property.map.id) should equal(NullableType(NodeT, RelationshipT, TimeT, DateT, MapT.MapOfUnknown))
+  }
+
+  test("UNWIND expects lists") {
+    val (expectations, statement) = parseAndAnalyse("UNWIND [1,2,3] as X RETURN X")
+
+    val property = statement.findByClass[ListLiteral]
+    expectations.get(property.id) should equal(NullableType(ListT.ListOfUnknown))
   }
 
 }
