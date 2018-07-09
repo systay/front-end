@@ -53,6 +53,12 @@ class TypeJudgementGenerator(types: TypeJudgements,
     private def overlaps(lhs: Set[NewCypherType], rhs: Set[NewCypherType]) = (lhs intersect rhs).nonEmpty
   }
 
+  private def binaryBoolean(x: Expression with BinaryOperatorExpression): Unit = {
+    val lhsT = types.get(x.lhs.id)
+    val rhsT = types.get(x.rhs.id)
+    set(x, TypeInfo(lhsT.nullable || rhsT.nullable, BoolT))
+  }
+
   override def visit(e: ASTNode): Unit = try {
     e match {
       // For a variable declaration, the type is whatever is expected
@@ -69,7 +75,6 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case x: Add =>
         val lhsTypes = types.get(x.lhs.id)
         val rhsTypes = types.get(x.rhs.id)
-
         val scalarTypes = new TypeCalculation().
           -->(StringT, IntegerT, FloatT) (StringT)         (StringT).
           -->(StringT)                   (IntegerT, FloatT)(StringT).
@@ -122,29 +127,26 @@ class TypeJudgementGenerator(types: TypeJudgements,
 
       // PREDICATES
       case x: Not => ???
-      case x: Equals => ???
-      case x: Equivalent => ???
-      case x: NotEquals => ???
-      case x: InvalidNotEquals => ???
+      case x: Equals => binaryBoolean(x)
+      case x: Equivalent => binaryBoolean(x)
+      case x: NotEquals => binaryBoolean(x)
+      case x: InvalidNotEquals => binaryBoolean(x)
       case x: RegexMatch => ???
-      case x: And =>
-        val lhsT = types.get(x.lhs.id)
-        val rhsT = types.get(x.rhs.id)
-        set(x, TypeInfo(lhsT.nullable || rhsT.nullable, BoolT))
-      case x: Or => ???
-      case x: Xor => ???
+      case x: And => binaryBoolean(x)
+      case x: Or => binaryBoolean(x)
+      case x: Xor => binaryBoolean(x)
       case x: Ands => ???
       case x: Ors => ???
       case x: In => ???
-      case x: StartsWith => ???
-      case x: EndsWith => ???
-      case x: Contains => ???
+      case x: StartsWith => binaryBoolean(x)
+      case x: EndsWith => binaryBoolean(x)
+      case x: Contains => binaryBoolean(x)
       case x: IsNull => ???
       case x: IsNotNull => ???
-      case x: LessThan => ???
-      case x: LessThanOrEqual => ???
-      case x: GreaterThan => ???
-      case x: GreaterThanOrEqual => ???
+      case x: LessThan => binaryBoolean(x)
+      case x: LessThanOrEqual => binaryBoolean(x)
+      case x: GreaterThan => binaryBoolean(x)
+      case x: GreaterThanOrEqual => binaryBoolean(x)
       case x: PartialPredicate[_] => ???
 
       //

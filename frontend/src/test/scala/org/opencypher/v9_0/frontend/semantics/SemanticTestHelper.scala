@@ -43,24 +43,33 @@ trait BinaryOpSemanticTest {
 
   def testValidTypes(lhs: Set[NewCypherType], rhs: Set[NewCypherType])(expectedResult: Set[NewCypherType]): Unit =
     test(s"${lhs.mkString("(", ", ", ")")} + ${rhs.mkString("(", ", ", ")")} -> ${expectedResult.mkString("(", ", ", ")")}") {
-      val types = new TypeJudgements
-      val aVariable = varFor("a")
-      val bVariable = varFor("b")
-      val ast: Expression = op(aVariable, bVariable)(pos)
-      val bindings = new VariableBindings
-      val expectations = new TypeExpectations
-      val bindingsLookup = new BindingsLookup(ast, bindings)
-      val typer = new TypeJudgementGenerator(types, bindingsLookup, expectations)
-
-      bindings.set(aVariable.id, Declaration)
-      bindings.set(bVariable.id, Declaration)
-
-      expectations.set(aVariable.id, new TypeInfo(lhs, true))
-      expectations.set(bVariable.id, new TypeInfo(rhs, true))
-
-      new TreeWalker(mockScoping, mockBinding, mockTypeExpectations, typer).visit(ast)
-
-      types.get(ast.id) should equal(new TypeInfo(expectedResult, true))
+      for {
+        l <- Seq(false, true)
+        r <- Seq(false, true)
+      } {
+        testWithNullableSpecified(lhs, rhs, expectedResult, l, r)
+      }
     }
 
+  private def testWithNullableSpecified(lhs: Set[NewCypherType],
+                                        rhs: Set[NewCypherType],
+                                        expectedResult: Set[NewCypherType],
+                                        lhsNullable: Boolean,
+                                        rhsNullable: Boolean): Unit = {
+    val types = new TypeJudgements
+    val aVariable = varFor("a")
+    val bVariable = varFor("b")
+    val ast: Expression = op(aVariable, bVariable)(pos)
+    val bindings = new VariableBindings
+    val expectations = new TypeExpectations
+    val bindingsLookup = new BindingsLookup(ast, bindings)
+    val typer = new TypeJudgementGenerator(types, bindingsLookup, expectations)
+
+    bindings.set(aVariable.id, Declaration)
+    bindings.set(bVariable.id, Declaration)
+    expectations.set(aVariable.id, new TypeInfo(lhs, lhsNullable))
+    expectations.set(bVariable.id, new TypeInfo(rhs, rhsNullable))
+    new TreeWalker(mockScoping, mockBinding, mockTypeExpectations, typer).visit(ast)
+    types.get(ast.id) should equal(new TypeInfo(expectedResult, lhsNullable || rhsNullable))
+  }
 }
