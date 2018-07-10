@@ -90,6 +90,10 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
       case SetLabelItem(variable, _) =>
         set(variable, NullableType(NodeT))
 
+      case SetPropertyItem(prop, expression) =>
+        set(expression, new TypeInfo(Types.PropertyTypes, true))
+        set(prop, new TypeInfo(Types.ANY, true))
+
       case where: Where =>
         set(where.expression, bool)
 

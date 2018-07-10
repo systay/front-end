@@ -40,6 +40,10 @@ object Types {
     DurationT
   )
 
+  val PropertyTypes: Set[NewCypherType] = Set(
+    StringT, IntegerT, FloatT, BoolT, PointT, GeometryT, DateT, TimeT, LocalTimeT, DateTimeT, LocalDateT, DurationT
+  )
+
   sealed trait NewCypherType {
     def isList = false
 

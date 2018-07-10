@@ -155,7 +155,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case x: AndedPropertyInequalities => ???
       case x: CoerceTo => ???
       case x: Property =>
-        set(x, NullableType(StringT, IntegerT, FloatT, BoolT, PointT, GeometryT, DateT, TimeT, LocalTimeT, DateTimeT, LocalDateT, DurationT))
+        set(x, new TypeInfo(Types.PropertyTypes, nullable = true))
       case x: FunctionInvocation => judgeFunctionInvocation(x)
       case x: GetDegree => ???
       case x: Parameter => ???

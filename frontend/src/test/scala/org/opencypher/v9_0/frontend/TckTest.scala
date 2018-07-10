@@ -55,7 +55,7 @@ class TckTest extends FunSpec {
                 Term
 
               case (Query(query), _: ExpectResult | _: Measure) =>
-                it(query + counter.toString) {
+                it(counter + " " + query) {
                   testQuery(query)
                 }
                 counter += 1
