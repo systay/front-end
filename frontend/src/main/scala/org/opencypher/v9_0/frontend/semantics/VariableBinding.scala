@@ -34,7 +34,6 @@ class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends
   // the scope, once the object has been scoped correctly.
   private val rememberToDeclare = new mutable.HashSet[Id]()
   private val rememberToReferenceOrDeclare = new mutable.HashSet[Id]()
-  private val rememberToReference = new mutable.HashSet[Id]()
 
 
   override def bind(obj: ASTNode, bindingMode: BindingMode): BindingMode = {
@@ -64,20 +63,6 @@ class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends
           }
       }
 
-    def referenceVar(v: LogicalVariable): Unit =
-      scopes.optionalGet(v.id) match {
-        case None =>
-          rememberToReference.add(v.id)
-        case Some(scope) =>
-          scope.getVariable(v.name) match {
-            case Some(ref) =>
-              variableBindings.set(v.id, Reference(ref.id))
-            case None =>
-              throw new VariableNotDeclaredError(v)
-          }
-
-      }
-
     (obj, bindingMode) match {
       case (m: Match, _) =>
         BindingAllowed(m.optional)
@@ -87,10 +72,6 @@ class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends
 
       case (ast: LogicalVariable, _) if rememberToDeclare(ast.id) =>
         declareVar(ast)
-        bindingMode
-
-      case (ast: LogicalVariable, _) if rememberToReference(ast.id) =>
-        referenceVar(ast)
         bindingMode
 
       case (ast: LogicalVariable, _) if rememberToReferenceOrDeclare(ast.id) =>
@@ -147,9 +128,11 @@ class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends
       case (_: Create | _: Merge, _) =>
         RelationshipBindingOnly
 
-      case (SetLabelItem(variable, _), _) =>
-        referenceVar(variable)
-        bindingMode
+      case (_:SetLabelItem, _) =>
+        ReferenceOnly
+
+      case (_:SetPropertyItem, _) =>
+        ReferenceOnly
 
       case _ =>
         bindingMode
