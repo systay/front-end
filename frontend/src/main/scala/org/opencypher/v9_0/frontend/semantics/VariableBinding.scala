@@ -16,7 +16,7 @@
 package org.opencypher.v9_0.frontend.semantics
 
 import org.opencypher.v9_0.ast._
-import org.opencypher.v9_0.expressions.{LogicalVariable, NodePattern, RelationshipChain}
+import org.opencypher.v9_0.expressions.{LogicalVariable, MapExpression, NodePattern, RelationshipChain}
 import org.opencypher.v9_0.util.attribution.{Attribute, Id}
 import org.opencypher.v9_0.util.{ASTNode, InternalException}
 
@@ -128,10 +128,7 @@ class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends
       case (_: Create | _: Merge, _) =>
         RelationshipBindingOnly
 
-      case (_:SetLabelItem, _) =>
-        ReferenceOnly
-
-      case (_:SetPropertyItem, _) =>
+      case (_: SetLabelItem | _: SetPropertyItem | _: MapExpression, _) =>
         ReferenceOnly
 
       case _ =>
