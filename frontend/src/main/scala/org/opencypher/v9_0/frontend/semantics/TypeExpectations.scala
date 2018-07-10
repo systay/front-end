@@ -15,7 +15,7 @@
  */
 package org.opencypher.v9_0.frontend.semantics
 
-import org.opencypher.v9_0.ast.{AliasedReturnItem, UnaliasedReturnItem, Unwind, Where}
+import org.opencypher.v9_0.ast._
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.frontend.semantics.Types._
 import org.opencypher.v9_0.util.ASTNode
@@ -86,6 +86,9 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
 
       case NamedPatternPart(variable, _) =>
         set(variable, TypeInfo(nullable, PathT))
+
+      case SetLabelItem(variable, _) =>
+        set(variable, NullableType(NodeT))
 
       case where: Where =>
         set(where.expression, bool)

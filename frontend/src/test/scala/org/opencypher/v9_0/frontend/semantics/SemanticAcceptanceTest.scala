@@ -53,4 +53,9 @@ class SemanticAcceptanceTest extends CypherFunSuite {
     val (statement, scopes, bindings, expectations, judgements) =
       testThis("CREATE ({foo: 'bar'})")
   }
+
+  test("MERGE (a) ON CREATE SET a:FOO RETURN a") {
+    val (statement, scopes, bindings, expectations, judgements) =
+      testThis("MERGE (a) ON CREATE SET a:FOO RETURN a")
+  }
 }
