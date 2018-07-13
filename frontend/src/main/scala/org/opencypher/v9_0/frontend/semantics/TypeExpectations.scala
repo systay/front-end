@@ -66,6 +66,7 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
   private def set(ast: ASTNode, t: TypeInfo): Unit = typeExpectations.set(ast.id, t)
   private def set(ast: Traversable[ASTNode], t: TypeInfo): Unit = ast.foreach(e => typeExpectations.set(e.id, t))
 
+  val no_expectations = new TypeInfo(Types.ANY, true)
 
   override def visit(ast: ASTNode, bindingMode: BindingMode): Unit = {
     val nullable = bindingMode match {
@@ -92,20 +93,21 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
 
       case SetPropertyItem(prop, expression) =>
         set(expression, new TypeInfo(Types.PropertyTypes, true))
-        set(prop, new TypeInfo(Types.ANY, true))
+        set(prop, no_expectations)
 
       case where: Where =>
         set(where.expression, bool)
 
       case unwind: Unwind =>
         set(unwind.expression, NullableType(ListT.ListOfUnknown))
+        set(unwind.variable, no_expectations)
 
       case AliasedReturnItem(exp, alias) =>
-        set(exp, new TypeInfo(Types.ANY, true))
+        set(exp, no_expectations)
         copyTypesBetween(from = exp, to = alias)
 
       case UnaliasedReturnItem(exp, _) =>
-        set(exp, new TypeInfo(Types.ANY, true))
+        set(exp, no_expectations)
 
       // Expressions
       case x: Add =>

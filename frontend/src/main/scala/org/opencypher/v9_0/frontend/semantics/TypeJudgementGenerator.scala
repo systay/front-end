@@ -17,7 +17,7 @@ package org.opencypher.v9_0.frontend.semantics
 
 import org.opencypher.v9_0.ast.semantics.SemanticCheckableExpression
 import org.opencypher.v9_0.expressions._
-import org.opencypher.v9_0.expressions.functions.Labels
+import org.opencypher.v9_0.expressions.functions._
 import org.opencypher.v9_0.frontend.semantics.Types._
 import org.opencypher.v9_0.util.attribution.Attribute
 import org.opencypher.v9_0.util.{ASTNode, InternalException}
@@ -27,38 +27,6 @@ import scala.collection.mutable
 class TypeJudgementGenerator(types: TypeJudgements,
                              bindingsLookup: BindingsLookup,
                              expectations: TypeExpectations) extends BottomUpVisitor {
-
-  private def setTypeFromExpectations(v: LogicalVariable): Unit =
-    set(v, expectations.get(v.id))
-
-  case class T(test1: Set[NewCypherType], test2: Set[NewCypherType], result: Set[NewCypherType])
-
-  class TypeCalculation {
-    private val acc = new mutable.ListBuffer[(Set[NewCypherType], Set[NewCypherType], Set[NewCypherType])]()
-
-    def -->(apa1: NewCypherType*)(apa2: NewCypherType*)(apa3: NewCypherType*): TypeCalculation = {
-      acc.append((apa1.toSet, apa2.toSet, apa3.toSet))
-      this
-    }
-
-    def calculate(lhs: Set[NewCypherType], rhs: Set[NewCypherType]): Set[NewCypherType] = acc.toList.foldLeft(Set.empty[NewCypherType]) {
-      case (accumulated, (test1, test2, result)) =>
-        if (
-          overlaps(lhs, test1) && overlaps(rhs, test2) ||
-          overlaps(lhs, test2) && overlaps(rhs, test1))
-          accumulated ++ result
-        else
-          accumulated
-    }
-
-    private def overlaps(lhs: Set[NewCypherType], rhs: Set[NewCypherType]) = (lhs intersect rhs).nonEmpty
-  }
-
-  private def binaryBoolean(x: Expression with BinaryOperatorExpression): Unit = {
-    val lhsT = types.get(x.lhs.id)
-    val rhsT = types.get(x.rhs.id)
-    set(x, TypeInfo(lhsT.nullable || rhsT.nullable, BoolT))
-  }
 
   override def visit(e: ASTNode): Unit = try {
     e match {
@@ -219,23 +187,190 @@ class TypeJudgementGenerator(types: TypeJudgements,
       throw new InternalException(s"Failed when trying to type id: ${e.id} $e \n$error", error)
   }
 
-  private def set(e: Expression, typeInfo: TypeInfo): Unit = {
-    types.set(e.id, typeInfo)
+  private def setTypeFromExpectations(v: LogicalVariable): Unit =
+    set(v, expectations.get(v.id))
+
+  private def binaryBoolean(x: Expression with BinaryOperatorExpression): Unit = {
+    val lhsT = types.get(x.lhs.id)
+    val rhsT = types.get(x.rhs.id)
+    set(x, TypeInfo(lhsT.nullable || rhsT.nullable, BoolT))
   }
 
   private def setNotNullable(e: Expression, calculatedTypes: NewCypherType*): Unit =
     set(e, new TypeInfo(calculatedTypes.toSet, false))
 
+  private def set(e: Expression, typeInfo: TypeInfo): Unit = {
+    types.set(e.id, typeInfo)
+  }
+
+  private def judgeFunctionInvocation(invocation: FunctionInvocation): Unit = invocation.function match {
+    case simpleTypeFunc: Function with TypeSignatures =>
+
+      trait TypeCalc {
+        def calculate(in: TypeInfo): TypeInfo
+      }
+
+      case class always(types: NewCypherType) extends TypeCalc {
+        override def calculate(in: TypeInfo): TypeInfo = new TypeInfo(Set(types), in.nullable)
+      }
+
+      case class iff(ifAny: NewCypherType, thenThis: NewCypherType) extends TypeCalc {
+        def ||(that: iff): complex = complex(Map.empty) || this || that
+
+        override def calculate(in: TypeInfo): TypeInfo = ???
+      }
+
+      case class complex(mappings: Map[NewCypherType, NewCypherType]) extends TypeCalc {
+        def ||(that: iff): complex = complex(mappings + (that.ifAny -> that.thenThis))
+
+        override def calculate(in: TypeInfo): TypeInfo = {
+          val newTypes = in.possible collect {
+            case t if mappings.contains(t) => mappings(t)
+          }
+          new TypeInfo(newTypes, in.nullable)
+        }
+      }
+
+      val calc: TypeCalc = invocation.function match {
+        case Abs =>
+          iff(IntegerT, IntegerT) ||
+            iff(FloatT, FloatT)
+        case Acos |
+             Asin |
+             Atan |
+             Atan2 |
+             Ceil |
+             Cos |
+             Cot |
+             Degrees |
+             Distance |
+             E |
+             Exp |
+             Floor |
+             Haversin |
+             Log |
+             Log10 |
+             Pi |
+             Radians |
+             Rand |
+             Round |
+             Sin |
+             Sqrt |
+             Tan |
+             ToFloat => always(FloatT)
+        case Avg =>
+          iff(IntegerT, IntegerT) ||
+            iff(FloatT, FloatT) ||
+            iff(DurationT, DurationT)
+
+        case EndNode |
+             StartNode =>
+          always(NodeT)
+
+        case Id |
+             Length |
+             Sign |
+             Size |
+             Timestamp |
+             ToInteger =>
+          always(IntegerT)
+
+        case Labels |
+             Keys =>
+          always(ListT(StringT))
+
+        case Left |
+             Right |
+             LTrim |
+             RTrim |
+             Replace |
+             Trim |
+             ToLower |
+             ToString |
+             ToUpper |
+             Split |
+             Substring =>
+          always(StringT)
+
+        case Nodes =>
+          always(ListT(NodeT))
+
+        case Point =>
+          always(PointT)
+
+        case functions.Range =>
+          always(ListT(IntegerT))
+
+        case Relationships =>
+          always(ListT(RelationshipT))
+
+        case Reverse => ???
+
+        case ToBoolean =>
+          always(BoolT)
+
+        case Properties => ???
+
+        case Type => ???
+      }
+
+      val argument = invocation.args.head
+      val in: TypeInfo = types.get(argument.id)
+
+      val result = calc.calculate(in)
+      set(invocation, result)
+
+    case Coalesce => ???
+    case Collect => ???
+    case Count => ???
+    case Exists => ???
+    case Head => ???
+    case Last => ???
+    case Max => ???
+    case Min => ???
+    case PercentileCont => ???
+    case PercentileDisc => ???
+    case Reduce => ???
+    case StdDev => ???
+    case StdDevP => ???
+    case Sum => ???
+
+    case _ => ???
+  }
+
   private def setNullable(e: Expression, calculatedTypes: NewCypherType*): Unit =
     set(e, new TypeInfo(calculatedTypes.toSet, true))
 
-  private def judgeFunctionInvocation(invocation: FunctionInvocation): Unit = invocation.function match {
-    case Labels =>
-      val argument = invocation.args.head
-      val nullable = types.get(argument.id).nullable
-      set(invocation, TypeInfo(nullable, ListT(StringT)))
-    case _ => ???
+  private def nullInNullOut(invocation: FunctionInvocation, typ: NewCypherType) = {
+    val argument = invocation.args.head
+    val nullable = types.get(argument.id).nullable
+    set(invocation, TypeInfo(nullable, typ))
+
   }
+
+  case class T(test1: Set[NewCypherType], test2: Set[NewCypherType], result: Set[NewCypherType])
+
+  class TypeCalculation {
+    private val acc = new mutable.ListBuffer[(Set[NewCypherType], Set[NewCypherType], Set[NewCypherType])]()
+
+    def -->(apa1: NewCypherType*)(apa2: NewCypherType*)(apa3: NewCypherType*): TypeCalculation = {
+      acc.append((apa1.toSet, apa2.toSet, apa3.toSet))
+      this
+    }
+
+    def calculate(lhs: Set[NewCypherType], rhs: Set[NewCypherType]): Set[NewCypherType] = acc.toList.foldLeft(Set.empty[NewCypherType]) {
+      case (accumulated, (test1, test2, result)) =>
+        if (
+          overlaps(lhs, test1) && overlaps(rhs, test2) ||
+            overlaps(lhs, test2) && overlaps(rhs, test1))
+          accumulated ++ result
+        else
+          accumulated
+    }
+
+    private def overlaps(lhs: Set[NewCypherType], rhs: Set[NewCypherType]) = (lhs intersect rhs).nonEmpty
+  }
+
 }
 
 class TypeJudgements extends Attribute[TypeInfo]
