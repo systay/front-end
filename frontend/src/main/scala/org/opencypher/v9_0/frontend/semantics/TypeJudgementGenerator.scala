@@ -42,21 +42,25 @@ class TypeJudgementGenerator(types: TypeJudgements,
       // ARITHMETICS
 
       case x: Add =>
-        val lhsTypes = types.get(x.lhs.id)
-        val rhsTypes = types.get(x.rhs.id)
-        val scalarTypes = new TypeCalculation().
-          -->(StringT, IntegerT, FloatT) (StringT)         (StringT).
-          -->(StringT)                   (IntegerT, FloatT)(StringT).
-          -->(IntegerT)                  (IntegerT)        (IntegerT).
-          -->(FloatT)                    (FloatT, IntegerT)(FloatT).
-          -->(DurationT)                 (DurationT)       (DurationT).
-          -->(DurationT)                 (DateT)           (DateT).
-          -->(DurationT)                 (TimeT)           (TimeT).
-          -->(DurationT)                 (DateTimeT)       (DateTimeT).
-          -->(DurationT)                 (LocalTimeT)      (LocalTimeT).
-          -->(DurationT)                 (LocalDateT)      (LocalDateT).
+        val lhsTypes: TypeInfo = types.get(x.lhs.id)
+        val rhsTypes: TypeInfo = types.get(x.rhs.id)
+        val scalarTypes: Set[NewCypherType] = new TypeRuleBuilder().
+          addRule(StringT, IntegerT, FloatT) (StringT)         (StringT).
+          addRule(IntegerT)                  (IntegerT)        (IntegerT).
+          addRule(FloatT)                    (FloatT, IntegerT)(FloatT).
+          addRule(DurationT)                 (DurationT)       (DurationT).
+          addRule(DurationT)                 (DateT)           (DateT).
+          addRule(DurationT)                 (TimeT)           (TimeT).
+          addRule(DurationT)                 (DateTimeT)       (DateTimeT).
+          addRule(DurationT)                 (LocalTimeT)      (LocalTimeT).
+          addRule(DurationT)                 (LocalDateT)      (LocalDateT).
           calculate(lhsTypes.possible, rhsTypes.possible)
 
+        /*
+        List[A] + List[B] => List[A|B]
+        List[A] + B       => List[A|B]
+        A + List[B]       => List[A|B]
+         */
         val listTypes: Set[NewCypherType] = for {
           lhs <- lhsTypes.possible
           rhs <- rhsTypes.possible if lhs.isList || rhs.isList
@@ -74,15 +78,15 @@ class TypeJudgementGenerator(types: TypeJudgements,
         val lhsTypes = types.get(x.lhs.id)
         val rhsTypes = types.get(x.rhs.id)
 
-        val possibleTypes = new TypeCalculation().
-          -->(IntegerT)  (IntegerT)           (IntegerT).
-          -->(FloatT)    (FloatT, IntegerT)(FloatT).
-          -->(DurationT) (DurationT)          (DurationT).
-          -->(DurationT) (DateT)              (DateT).
-          -->(DurationT) (TimeT)              (TimeT).
-          -->(DurationT) (DateTimeT)          (DateTimeT).
-          -->(DurationT) (LocalTimeT)         (LocalTimeT).
-          -->(DurationT) (LocalDateT)     (LocalDateT).
+        val possibleTypes = new TypeRuleBuilder().
+          addRule(IntegerT)  (IntegerT)           (IntegerT).
+          addRule(FloatT)    (FloatT, IntegerT)   (FloatT).
+          addRule(DurationT) (DurationT)          (DurationT).
+          addRule(DurationT) (DateT)              (DateT).
+          addRule(DurationT) (TimeT)              (TimeT).
+          addRule(DurationT) (DateTimeT)          (DateTimeT).
+          addRule(DurationT) (LocalTimeT)         (LocalTimeT).
+          addRule(DurationT) (LocalDateT)         (LocalDateT).
           calculate(lhsTypes.possible, rhsTypes.possible)
 
         val nullability = lhsTypes.nullable || rhsTypes.nullable
@@ -204,7 +208,13 @@ class TypeJudgementGenerator(types: TypeJudgements,
   }
 
   private def judgeFunctionInvocation(invocation: FunctionInvocation): Unit = invocation.function match {
-    case _: Function with TypeSignatures =>
+    case Coalesce =>
+      val incomingTypes = invocation.args.map(e => types.get(e.id))
+      val nonNullableExpressionFound = incomingTypes.exists(info => !info.nullable)
+      val possibleTypes = incomingTypes.map(_.possible).reduce(_ ++ _)
+      set(invocation, new TypeInfo(possibleTypes, !nonNullableExpressionFound))
+
+    case _: Function =>
       val calc: TypeCalc = invocation.function match {
         case Abs =>
           iff(IntegerT -> IntegerT) ||
@@ -235,6 +245,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
              Tan |
              ToFloat =>
           static(FloatT)
+
         case Avg =>
           iff(IntegerT -> IntegerT) ||
           iff(FloatT -> FloatT) ||
@@ -285,7 +296,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
 
         case Reverse =>
           iff(StringT -> StringT) ||
-          ifList(passThrough)
+          ifList(sameType)
 
         case Exists | ToBoolean =>
           static(BoolT)
@@ -293,10 +304,27 @@ class TypeJudgementGenerator(types: TypeJudgements,
         case Properties =>
           iff(NodeT -> MapT(Types.PropertyTypes)) ||
           iff(RelationshipT -> MapT(Types.PropertyTypes)) ||
-          ifMap(passThrough)
+          ifMap(sameType)
 
         case Head =>
           ifList(in => in.inner)
+
+        case Collect =>
+          dynamic(in => ListT(in))
+
+        case Head | Last =>
+          ifList(in => in.inner)
+
+        case Max | Min =>
+          identity // The output type will be whatever we get in
+
+        case Reduce =>
+          identity // This is only here to give a good error message during linting. fake the type judgement for now
+
+        case StdDev => ???
+        case StdDevP => ???
+        case Sum => ???
+
       }
 
       val argument: Option[Expression] = invocation.args.headOption
@@ -304,27 +332,6 @@ class TypeJudgementGenerator(types: TypeJudgements,
 
       val result = calc(in.possible)
       set(invocation, new TypeInfo(result, in.nullable))
-
-    case Coalesce =>
-      val incomingTypes = invocation.args.map(e => types.get(e.id))
-      val nonNullableExpressionFound = incomingTypes.exists(info => !info.nullable)
-      val possibleTypes = incomingTypes.map(_.possible).reduce(_ ++ _)
-      set(invocation, new TypeInfo(possibleTypes, !nonNullableExpressionFound))
-
-    case Collect =>
-      always(in => ListT(in))
-
-    case Head | Last =>
-      ifList(in => in.inner)
-
-    case Max => ???
-    case Min => ???
-    case Reduce => ???
-    case StdDev => ???
-    case StdDevP => ???
-    case Sum => ???
-
-    case _ => ???
   }
 
   private def setNullable(e: Expression, calculatedTypes: NewCypherType*): Unit =
@@ -339,10 +346,10 @@ class TypeJudgementGenerator(types: TypeJudgements,
 
   case class T(test1: Set[NewCypherType], test2: Set[NewCypherType], result: Set[NewCypherType])
 
-  class TypeCalculation {
+  class TypeRuleBuilder {
     private val acc = new mutable.ListBuffer[(Set[NewCypherType], Set[NewCypherType], Set[NewCypherType])]()
 
-    def -->(apa1: NewCypherType*)(apa2: NewCypherType*)(apa3: NewCypherType*): TypeCalculation = {
+    def addRule(apa1: NewCypherType*)(apa2: NewCypherType*)(apa3: NewCypherType*): TypeRuleBuilder = {
       acc.append((apa1.toSet, apa2.toSet, apa3.toSet))
       this
     }
@@ -375,7 +382,11 @@ trait TypeCalc extends (Set[NewCypherType] => Set[NewCypherType]) {
   }
 }
 
-case class always(func: NewCypherType => NewCypherType) extends TypeCalc {
+case object identity extends TypeCalc {
+  override def apply(v1: Set[NewCypherType]): Set[NewCypherType] = v1
+}
+
+case class dynamic(func: NewCypherType => NewCypherType) extends TypeCalc {
   override def apply(v1: Set[NewCypherType]): Set[NewCypherType] = v1.map(func)
 }
 
@@ -405,6 +416,6 @@ case class ifMap(typeCalc: MapT => Set[NewCypherType]) extends TypeCalc {
   }.flatten
 }
 
-object passThrough extends (NewCypherType => Set[NewCypherType]) {
+object sameType extends (NewCypherType => Set[NewCypherType]) {
   override def apply(v1: NewCypherType): Set[NewCypherType] = Set(v1)
 }
