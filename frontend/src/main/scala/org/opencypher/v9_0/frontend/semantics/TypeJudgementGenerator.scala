@@ -204,37 +204,11 @@ class TypeJudgementGenerator(types: TypeJudgements,
   }
 
   private def judgeFunctionInvocation(invocation: FunctionInvocation): Unit = invocation.function match {
-    case simpleTypeFunc: Function with TypeSignatures =>
-
-      trait TypeCalc {
-        def calculate(in: TypeInfo): TypeInfo
-      }
-
-      case class always(types: NewCypherType) extends TypeCalc {
-        override def calculate(in: TypeInfo): TypeInfo = new TypeInfo(Set(types), in.nullable)
-      }
-
-      case class iff(ifAny: NewCypherType, thenThis: NewCypherType) extends TypeCalc {
-        def ||(that: iff): complex = complex(Map.empty) || this || that
-
-        override def calculate(in: TypeInfo): TypeInfo = ???
-      }
-
-      case class complex(mappings: Map[NewCypherType, NewCypherType]) extends TypeCalc {
-        def ||(that: iff): complex = complex(mappings + (that.ifAny -> that.thenThis))
-
-        override def calculate(in: TypeInfo): TypeInfo = {
-          val newTypes = in.possible collect {
-            case t if mappings.contains(t) => mappings(t)
-          }
-          new TypeInfo(newTypes, in.nullable)
-        }
-      }
-
+    case _: Function with TypeSignatures =>
       val calc: TypeCalc = invocation.function match {
         case Abs =>
-          iff(IntegerT, IntegerT) ||
-            iff(FloatT, FloatT)
+          iff(IntegerT -> IntegerT) ||
+          iff(FloatT -> FloatT)
         case Acos |
              Asin |
              Atan |
@@ -250,6 +224,8 @@ class TypeJudgementGenerator(types: TypeJudgements,
              Haversin |
              Log |
              Log10 |
+             PercentileCont |
+             PercentileDisc |
              Pi |
              Radians |
              Rand |
@@ -257,27 +233,29 @@ class TypeJudgementGenerator(types: TypeJudgements,
              Sin |
              Sqrt |
              Tan |
-             ToFloat => always(FloatT)
+             ToFloat =>
+          static(FloatT)
         case Avg =>
-          iff(IntegerT, IntegerT) ||
-            iff(FloatT, FloatT) ||
-            iff(DurationT, DurationT)
+          iff(IntegerT -> IntegerT) ||
+          iff(FloatT -> FloatT) ||
+          iff(DurationT -> DurationT)
 
         case EndNode |
              StartNode =>
-          always(NodeT)
+          static(NodeT)
 
-        case Id |
+        case Count |
+             Id |
              Length |
              Sign |
              Size |
              Timestamp |
              ToInteger =>
-          always(IntegerT)
+          static(IntegerT)
 
         case Labels |
              Keys =>
-          always(ListT(StringT))
+          static(ListT(StringT))
 
         case Left |
              Right |
@@ -288,48 +266,59 @@ class TypeJudgementGenerator(types: TypeJudgements,
              ToLower |
              ToString |
              ToUpper |
+             Type |
              Split |
              Substring =>
-          always(StringT)
+          static(StringT)
 
         case Nodes =>
-          always(ListT(NodeT))
+          static(ListT(NodeT))
 
         case Point =>
-          always(PointT)
+          static(PointT)
 
         case functions.Range =>
-          always(ListT(IntegerT))
+          static(ListT(IntegerT))
 
         case Relationships =>
-          always(ListT(RelationshipT))
+          static(ListT(RelationshipT))
 
-        case Reverse => ???
+        case Reverse =>
+          iff(StringT -> StringT) ||
+          ifList(passThrough)
 
-        case ToBoolean =>
-          always(BoolT)
+        case Exists | ToBoolean =>
+          static(BoolT)
 
-        case Properties => ???
+        case Properties =>
+          iff(NodeT -> MapT(Types.PropertyTypes)) ||
+          iff(RelationshipT -> MapT(Types.PropertyTypes)) ||
+          ifMap(passThrough)
 
-        case Type => ???
+        case Head =>
+          ifList(in => in.inner)
       }
 
-      val argument = invocation.args.head
-      val in: TypeInfo = types.get(argument.id)
+      val argument: Option[Expression] = invocation.args.headOption
+      val in: TypeInfo = argument.map(arg => types(arg.id)).getOrElse(new TypeInfo(Set.empty, nullable = false))
 
-      val result = calc.calculate(in)
-      set(invocation, result)
+      val result = calc(in.possible)
+      set(invocation, new TypeInfo(result, in.nullable))
 
-    case Coalesce => ???
-    case Collect => ???
-    case Count => ???
-    case Exists => ???
-    case Head => ???
-    case Last => ???
+    case Coalesce =>
+      val incomingTypes = invocation.args.map(e => types.get(e.id))
+      val nonNullableExpressionFound = incomingTypes.exists(info => !info.nullable)
+      val possibleTypes = incomingTypes.map(_.possible).reduce(_ ++ _)
+      set(invocation, new TypeInfo(possibleTypes, !nonNullableExpressionFound))
+
+    case Collect =>
+      always(in => ListT(in))
+
+    case Head | Last =>
+      ifList(in => in.inner)
+
     case Max => ???
     case Min => ???
-    case PercentileCont => ???
-    case PercentileDisc => ???
     case Reduce => ???
     case StdDev => ???
     case StdDevP => ???
@@ -374,3 +363,48 @@ class TypeJudgementGenerator(types: TypeJudgements,
 }
 
 class TypeJudgements extends Attribute[TypeInfo]
+
+trait TypeCalc extends (Set[NewCypherType] => Set[NewCypherType]) {
+  self =>
+  def ||(other: TypeCalc): TypeCalc = new TypeCalc {
+    override def apply(in: Set[NewCypherType]): Set[NewCypherType] = {
+      val thisResult = self.apply(in)
+      val thatResult = other.apply(in)
+      thisResult ++ thatResult
+    }
+  }
+}
+
+case class always(func: NewCypherType => NewCypherType) extends TypeCalc {
+  override def apply(v1: Set[NewCypherType]): Set[NewCypherType] = v1.map(func)
+}
+
+case class static(typ: NewCypherType) extends TypeCalc {
+  override def apply(in: Set[NewCypherType]): Set[NewCypherType] = Set(typ)
+}
+
+case class iff(ifAny: (NewCypherType, NewCypherType)) extends TypeCalc {
+  override def apply(in: Set[NewCypherType]): Set[NewCypherType] = in collect {
+    case t if t == ifAny._1 => ifAny._2
+  }
+}
+
+case class ifList(typeCalc: ListT => Set[NewCypherType]) extends TypeCalc {
+  override def apply(v1: Set[NewCypherType]): Set[NewCypherType] = {
+    v1 collect {
+      case t: ListT => typeCalc(t)
+    }
+  }.flatten
+}
+
+case class ifMap(typeCalc: MapT => Set[NewCypherType]) extends TypeCalc {
+  override def apply(v1: Set[NewCypherType]): Set[NewCypherType] = {
+    v1 collect {
+      case t: MapT => typeCalc(t)
+    }
+  }.flatten
+}
+
+object passThrough extends (NewCypherType => Set[NewCypherType]) {
+  override def apply(v1: NewCypherType): Set[NewCypherType] = Set(v1)
+}

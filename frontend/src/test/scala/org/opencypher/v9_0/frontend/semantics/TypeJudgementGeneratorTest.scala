@@ -46,4 +46,6 @@ class TypeJudgementGeneratorTest extends CypherFunSuite {
   testa("RETURN [1,2,3]", NonNullableType(ListT(IntegerT)))
   testa("MATCH (a) WITH a AS a RETURN a", NonNullableType(NodeT))
   testa("CREATE (s:Single), (a:A {prop: 42}) RETURN a", NonNullableType(NodeT))
+  testa("MATCH (a) RETURN coalesce(a.prop, 42)", new TypeInfo(Types.PropertyTypes, nullable = false))
+  testa("MATCH (a) RETURN coalesce(a.prop, a.bar)", new TypeInfo(Types.PropertyTypes, nullable = true))
 }

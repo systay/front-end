@@ -81,7 +81,7 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
         set(props, NonNullableType(MapT(?)))
         set(variable, TypeInfo(nullable, NodeT))
 
-      case RelationshipPattern(Some(variable), _, _, props, _, _ ,_) =>
+      case RelationshipPattern(variable, _, _, props, _, _ ,_) =>
         set(props, NonNullableType(MapT(?)))
         set(variable, TypeInfo(nullable, RelationshipT))
 
@@ -108,6 +108,9 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
 
       case UnaliasedReturnItem(exp, _) =>
         set(exp, no_expectations)
+
+      case Delete(expressions, _) =>
+        set(expressions, NullableType(PathT, NodeT, RelationshipT))
 
       // Expressions
       case x: Add =>

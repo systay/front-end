@@ -16,7 +16,7 @@
 package org.opencypher.v9_0.frontend.semantics
 
 import org.opencypher.v9_0.ast._
-import org.opencypher.v9_0.expressions.{LogicalVariable, MapExpression, NodePattern, RelationshipChain}
+import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.util.attribution.{Attribute, Id}
 import org.opencypher.v9_0.util.{ASTNode, InternalException}
 
@@ -113,6 +113,8 @@ class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends
         relationshipChain.element match {
           case leftNode: NodePattern =>
             leftNode.variable.foreach(referenceOrDeclare)
+          case relationship: RelationshipChain =>
+            relationship.variable.foreach(declareVar)
         }
         bindingMode
 
