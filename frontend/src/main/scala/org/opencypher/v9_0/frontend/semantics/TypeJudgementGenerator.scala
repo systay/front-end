@@ -68,6 +68,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
             case (ListT(leftInner), ListT(rightInner)) => ListT(leftInner ++ rightInner)
             case (ListT(leftInner), other) => ListT(leftInner + other)
             case (other, ListT(leftInner)) => ListT(leftInner + other)
+            case _ => throw new InternalException("only here to stop warnings")
           }
 
         val nullability = lhsTypes.nullable || rhsTypes.nullable
@@ -222,6 +223,9 @@ class TypeJudgementGenerator(types: TypeJudgements,
 
       val result = calc(in.possible)
       set(invocation, new TypeInfo(result, in.nullable))
+
+    case functions.Range =>
+      set(invocation, NonNullableType(ListT(IntegerT)))
 
     case _ => ???
   }
