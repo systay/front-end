@@ -16,8 +16,8 @@
 package org.opencypher.v9_0.frontend.semantics
 
 import org.opencypher.v9_0.ast.semantics.SemanticCheckableExpression
-import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.expressions.functions._
+import org.opencypher.v9_0.expressions.{functions, _}
 import org.opencypher.v9_0.frontend.semantics.Types._
 import org.opencypher.v9_0.util.attribution.Attribute
 import org.opencypher.v9_0.util.{ASTNode, InternalException}
@@ -214,125 +214,124 @@ class TypeJudgementGenerator(types: TypeJudgements,
       val possibleTypes = incomingTypes.map(_.possible).reduce(_ ++ _)
       set(invocation, new TypeInfo(possibleTypes, !nonNullableExpressionFound))
 
-    case _: Function =>
-      val calc: TypeCalc = invocation.function match {
-        case Abs =>
-          iff(IntegerT -> IntegerT) ||
-          iff(FloatT -> FloatT)
-        case Acos |
-             Asin |
-             Atan |
-             Atan2 |
-             Ceil |
-             Cos |
-             Cot |
-             Degrees |
-             Distance |
-             E |
-             Exp |
-             Floor |
-             Haversin |
-             Log |
-             Log10 |
-             PercentileCont |
-             PercentileDisc |
-             Pi |
-             Radians |
-             Rand |
-             Round |
-             Sin |
-             Sqrt |
-             Tan |
-             ToFloat =>
-          static(FloatT)
-
-        case Avg =>
-          iff(IntegerT -> IntegerT) ||
-          iff(FloatT -> FloatT) ||
-          iff(DurationT -> DurationT)
-
-        case EndNode |
-             StartNode =>
-          static(NodeT)
-
-        case Count |
-             Id |
-             Length |
-             Sign |
-             Size |
-             Timestamp |
-             ToInteger =>
-          static(IntegerT)
-
-        case Labels |
-             Keys =>
-          static(ListT(StringT))
-
-        case Left |
-             Right |
-             LTrim |
-             RTrim |
-             Replace |
-             Trim |
-             ToLower |
-             ToString |
-             ToUpper |
-             Type |
-             Split |
-             Substring =>
-          static(StringT)
-
-        case Nodes =>
-          static(ListT(NodeT))
-
-        case Point =>
-          static(PointT)
-
-        case functions.Range =>
-          static(ListT(IntegerT))
-
-        case Relationships =>
-          static(ListT(RelationshipT))
-
-        case Reverse =>
-          iff(StringT -> StringT) ||
-          ifList(sameType)
-
-        case Exists | ToBoolean =>
-          static(BoolT)
-
-        case Properties =>
-          iff(NodeT -> MapT(Types.PropertyTypes)) ||
-          iff(RelationshipT -> MapT(Types.PropertyTypes)) ||
-          ifMap(sameType)
-
-        case Head =>
-          ifList(in => in.inner)
-
-        case Collect =>
-          dynamic(in => ListT(in))
-
-        case Head | Last =>
-          ifList(in => in.inner)
-
-        case Max | Min =>
-          identity // The output type will be whatever we get in
-
-        case Reduce =>
-          identity // This is only here to give a good error message during linting. fake the type judgement for now
-
-        case StdDev => ???
-        case StdDevP => ???
-        case Sum => ???
-
-      }
+    case _: Function if invocation.args.length <= 1 =>
+      val calc: TypeCalc = getTypeCalc(invocation.function)
 
       val argument: Option[Expression] = invocation.args.headOption
       val in: TypeInfo = argument.map(arg => types(arg.id)).getOrElse(new TypeInfo(Set.empty, nullable = false))
 
       val result = calc(in.possible)
       set(invocation, new TypeInfo(result, in.nullable))
+
+    case _ => ???
   }
+
+  private def getTypeCalc(func: functions.Function): TypeCalc = func match {
+    case Abs =>
+      iff(IntegerT -> IntegerT) ||
+        iff(FloatT -> FloatT)
+    case Acos |
+         Asin |
+         Atan |
+         Atan2 |
+         Ceil |
+         Cos |
+         Cot |
+         Degrees |
+         Distance |
+         E |
+         Exp |
+         Floor |
+         Haversin |
+         Log |
+         Log10 |
+         PercentileCont |
+         PercentileDisc |
+         Pi |
+         Radians |
+         Rand |
+         Round |
+         Sin |
+         StdDev |
+         StdDevP |
+         Sqrt |
+         Tan |
+         ToFloat =>
+      static(FloatT)
+
+    case Avg | Sum | Min | Max =>
+      iff(IntegerT -> IntegerT) ||
+        iff(FloatT -> FloatT) ||
+        iff(DurationT -> DurationT)
+
+    case EndNode |
+         StartNode =>
+      static(NodeT)
+
+    case Count |
+         Id |
+         Length |
+         Sign |
+         Size |
+         Timestamp |
+         ToInteger =>
+      static(IntegerT)
+
+    case Labels |
+         Keys =>
+      static(ListT(StringT))
+
+    case Left |
+         Right |
+         LTrim |
+         RTrim |
+         Replace |
+         Trim |
+         ToLower |
+         ToString |
+         ToUpper |
+         Type |
+         Split |
+         Substring =>
+      static(StringT)
+
+    case Nodes =>
+      static(ListT(NodeT))
+
+    case Point =>
+      static(PointT)
+
+    case functions.Range =>
+      static(ListT(IntegerT))
+
+    case Relationships =>
+      static(ListT(RelationshipT))
+
+    case Reverse =>
+      iff(StringT -> StringT) ||
+        ifList(sameType)
+
+    case Exists | ToBoolean =>
+      static(BoolT)
+
+    case Properties =>
+      iff(NodeT -> MapT(Types.PropertyTypes)) ||
+        iff(RelationshipT -> MapT(Types.PropertyTypes)) ||
+        ifMap(sameType)
+
+    case Head =>
+      ifList(in => in.inner)
+
+    case Collect =>
+      dynamic(in => ListT(in))
+
+    case Head | Last =>
+      ifList(in => in.inner)
+
+    case Reduce =>
+      identity // This is only here to give a good error message during linting. fake the type judgement for now
+  }
+
 
   private def setNullable(e: Expression, calculatedTypes: NewCypherType*): Unit =
     set(e, new TypeInfo(calculatedTypes.toSet, true))
