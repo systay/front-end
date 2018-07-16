@@ -61,6 +61,5 @@ class SemanticAcceptanceTest extends CypherFunSuite {
 
   test("CREATE ()-[:T {id: 42}]->()") {
     val (x) = testThis("CREATE ()-[:T {id: 42}]->()")
-    println(x)
   }
 }

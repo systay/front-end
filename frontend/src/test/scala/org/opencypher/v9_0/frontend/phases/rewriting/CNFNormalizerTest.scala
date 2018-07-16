@@ -121,7 +121,7 @@ class CNFNormalizerTest extends CypherFunSuite with PredicateTestSupport {
     val monitors = mock[Monitors]
     astRewritingMonitor = mock[AstRewritingMonitor]
     when(monitors.newMonitor[AstRewritingMonitor]()).thenReturn(astRewritingMonitor)
-    rewriter = CNFNormalizer.instance(InitialState("query", None, NoPlannerName), new TestContext(monitors))
+    rewriter = CNFNormalizer.instance(InitialState("query", None, NoPlannerName, maybePositions = Some(new InputPositions)), new TestContext(monitors))
   }
 }
 
@@ -160,7 +160,7 @@ case class TestState() extends BaseState {
 
   override def maybeSemanticTable: Option[SemanticTable] = ???
 
-  override def maybePositions: Option[InputPositions] = ???
+  override def maybePositions: Option[InputPositions] = Some(new InputPositions)
 
   override def accumulatedConditions: Set[Condition] = ???
 

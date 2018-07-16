@@ -431,8 +431,7 @@ class MultipleGraphClauseSemanticCheckingTest
       override def toTextOutput: String = name
     }
 
-
-    override def maybePositions: Option[InputPositions] = None
+    override def maybePositions: Option[InputPositions] = Some(new InputPositions)
 
     override def maybeSemantics = None
 

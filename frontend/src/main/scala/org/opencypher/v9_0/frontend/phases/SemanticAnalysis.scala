@@ -18,7 +18,6 @@ package org.opencypher.v9_0.frontend.phases
 import org.opencypher.v9_0.ast.UnaliasedReturnItem
 import org.opencypher.v9_0.ast.semantics.{SemanticCheckResult, SemanticChecker, SemanticFeature, SemanticState}
 import org.opencypher.v9_0.frontend.phases.CompilationPhaseTracer.CompilationPhase.SEMANTIC_CHECK
-import org.opencypher.v9_0.frontend.semantics._
 import org.opencypher.v9_0.rewriting.conditions.containsNoNodesOfType
 
 case class SemanticAnalysis(warn: Boolean, features: SemanticFeature*)
@@ -37,21 +36,8 @@ case class SemanticAnalysis(warn: Boolean, features: SemanticFeature*)
 
     context.errorHandler(errors)
 
-    val scopes = new Scopes
-    val bindings = new VariableBindings
-    val expectations = new TypeExpectations
-    val scoping = new Scoper(scopes)
-    val binding = new VariableBinder(bindings, scopes)
-    val judgements = new TypeJudgements()
-    val typeExpectationsPt1 = new TypeExpectationsGenerator(expectations, judgements)
-    val typeJudgementGen = new TypeJudgementGenerator(judgements, new BindingsLookup(from.statement(), bindings), expectations)
-    val typeExpectationsPt2 = new TypeExpectationsAfterJudgements(expectations, judgements)
-    val semanticAnalyser = new TreeWalker(scoping, binding, typeExpectationsPt1, typeJudgementGen)
-
-    semanticAnalyser.visit(from.statement())
-
-
     from.withSemanticState(state)
+
   }
 
   override def phase: CompilationPhaseTracer.CompilationPhase = SEMANTIC_CHECK
