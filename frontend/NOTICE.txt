@@ -19,21 +19,49 @@ Third-party licenses
 
 Apache Software License, Version 2.0
   Apache Commons Lang
+  Cucumber-JVM Repackaged Dependencies
+  Gherkin Repackaged Dependencies
   openCypher AST for the Cypher Query Language
   openCypher Expressions
   openCypher Parser
   openCypher Rewriting
+  openCypher TCK API
+  openCypher TCK Features and Graphs
+  openCypher TCK Integrity Tests
   openCypher Utils
+  org.apiguardian:apiguardian-api
+  org.opentest4j:opentest4j
   parboiled-core
   parboiled-scala
   scalatest
+  tools
 
 BSD - Scala License
   Scala Library
 
 BSD License
+  ANTLR 4 Runtime
+  Cucumber-JVM Repackaged Dependencies
   Scala Compiler
   scala-xml
   scalacheck
   test-interface
+
+Eclipse Public License v2.0
+  org.junit.jupiter:junit-jupiter-api
+  org.junit.platform:junit-platform-commons
+
+MIT License
+  Cucumber-HTML
+  Cucumber-JVM: Core
+  Cucumber-JVM: JUnit
+  Cucumber-JVM: Scala (2.11)
+  Gherkin
+
+Dependencies with multiple licenses
+-----------------------------------
+
+Cucumber-JVM Repackaged Dependencies
+  Apache Software License, Version 2.0
+  BSD License
 
