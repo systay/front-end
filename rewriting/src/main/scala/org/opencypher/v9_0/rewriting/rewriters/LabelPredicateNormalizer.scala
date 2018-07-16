@@ -24,7 +24,7 @@ case class LabelPredicateNormalizer(attributes: Attributes) extends MatchPredica
   override val extract: PartialFunction[AnyRef, IndexedSeq[Expression]] = {
     case p@NodePattern(Some(id), labels, _, _) if labels.nonEmpty =>
       labels.map {
-        l => HasLabels(id.copyId, labels)(p.position)(attributes.copy(p.id))
+        l => HasLabels(id.copyId, Seq(l))(p.position)(attributes.copy(p.id))
       }.toIndexedSeq
   }
 

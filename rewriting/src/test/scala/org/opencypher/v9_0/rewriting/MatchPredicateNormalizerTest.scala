@@ -116,7 +116,7 @@ class MatchPredicateNormalizerTest extends CypherFunSuite with RewriteTest {
   test("move multiple labels from nodes to WHERE") {
     assertRewrite(
       "MATCH (n:L1:L2) RETURN n",
-      "MATCH (n) WHERE n:L1:L2 RETURN n")
+      "MATCH (n) WHERE n:L1 AND n:L2 RETURN n")
   }
 
   test("move single label from start node to WHERE when pattern contains relationship") {
