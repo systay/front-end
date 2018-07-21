@@ -31,7 +31,8 @@ object CompilationPhases {
       AstRewriting(sequencer, literalExtraction)
 
   val lateAstRewriting: Transformer[BaseContext, BaseState, BaseState] =
-    SemanticAnalysis(warn = false) andThen
+      isolateAggregation andThen
+      SemanticAnalysis(warn = false) andThen
       Namespacer andThen
       transitiveClosure andThen
       rewriteEqualityToInPredicate andThen

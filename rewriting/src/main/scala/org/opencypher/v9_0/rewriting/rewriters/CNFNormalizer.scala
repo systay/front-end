@@ -106,13 +106,22 @@ case class simplifyPredicates(attributes: Attributes) extends Rewriter {
 
   private val step: Rewriter = Rewriter.lift {
     case Not(Not(exp))                                     => exp
-    case p@Ands(exps) if exps.size == 1                    => exps.head
-    case p@Ors(exps) if exps.size == 1                     => exps.head
-    case p@Ands(exps) if exps.exists(_.isInstanceOf[True]) => Ands(exps.filterNot(_.isInstanceOf[True]))(p.position)(SameId(p.id))
-    case p@Ors(exps) if exps.exists(_.isInstanceOf[False]) => Ors(exps.filterNot(_.isInstanceOf[False]))(p.position)(SameId(p.id))
+    case p@Ands(exps) if exps.exists(_.isInstanceOf[True]) =>
+      val expressions = exps.filterNot(_.isInstanceOf[True])
+      if(expressions.isEmpty)
+        True()(p.position)(attributes.copy(p.id))
+      else
+        Ands(expressions)(p.position)(SameId(p.id))
+    case p@Ors(exps) if exps.exists(_.isInstanceOf[False]) =>
+      val expressions = exps.filterNot(_.isInstanceOf[False])
+      if(expressions.isEmpty)
+        False()(p.position)(attributes.copy(p.id))
+      else
+        Ors(expressions)(p.position)(SameId(p.id))
     case p@Ors(exps) if exps.exists(_.isInstanceOf[True])  => True()(p.position)(attributes.copy(p.id))
     case p@Ands(exps) if exps.exists(_.isInstanceOf[False])=> False()(p.position)(attributes.copy(p.id))
   }
+
 
   private val instance = fixedPoint(bottomUp(step))
 }
