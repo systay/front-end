@@ -18,6 +18,9 @@ package org.opencypher.v9_0.rewriting
 import org.opencypher.v9_0.ast.semantics.SemanticChecker
 import org.opencypher.v9_0.ast.{SequentialIds, Statement}
 import org.opencypher.v9_0.parser.ParserFixture.parse
+import org.opencypher.v9_0.ast.Statement
+import org.opencypher.v9_0.ast.prettifier.{ExpressionStringifier, Prettifier}
+import org.opencypher.v9_0.ast.semantics.SemanticChecker
 import org.opencypher.v9_0.util.Rewriter
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
@@ -25,6 +28,8 @@ trait RewriteTest extends SequentialIds{
   self: CypherFunSuite =>
 
   def rewriterUnderTest: Rewriter
+
+  val prettifier = Prettifier(ExpressionStringifier(_.asCanonicalStringVal))
 
   protected def assertRewrite(originalQuery: String, expectedQuery: String) {
     val original = parseForRewriting(originalQuery)
@@ -52,6 +57,6 @@ trait RewriteTest extends SequentialIds{
   protected def assertIsNotRewritten(query: String) {
     val original = parse(query)
     val result = original.rewrite(rewriterUnderTest)
-    assert(result === original, "\n" + query)
+    assert(result === original, s"\n$query\nshould not have been rewritten but was to:\n${prettifier.asString(result.asInstanceOf[Statement])}")
   }
 }

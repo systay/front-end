@@ -30,16 +30,10 @@ case class expandStar(state: SemanticState, attr: Attributes) extends Rewriter {
       val newReturnItems = returnItems(clause, clause.returnItems.items)
       clause.copy(returnItems = newReturnItems)(clause.position)(SameId(clause.id))
 
-    case clause: PragmaWithout =>
-      With(
-        distinct = false,
-        returnItems = returnItems(clause, Seq.empty, clause.excludedNames),
-        orderBy = None, skip = None, limit = None, where = None)(clause.position)(SameId(clause.id))
-
     case clause: Return if clause.returnItems.includeExisting =>
       val values = clause.returnItems
       val newReturnItems = if (values.includeExisting) returnItems(clause, values.items, clause.excludedNames) else values
-      clause.copy(returnItems = newReturnItems, excludedNames = Set.empty)(clause.position)(SameId(clause.id))
+      clause.copy(returnItems = newReturnItems, excludedNames = Set.empty)(clause.position)(attr.copy(clause.id))
 
     case expandedAstNode =>
       expandedAstNode

@@ -200,11 +200,18 @@ object SemanticExpressionCheck extends SemanticAnalysisTooling {
       case x:Variable =>
         s => s.ensureVariableDefined(x) match {
           case Right(ss) => SemanticCheckResult.success(ss)
-          case Left(error) => s.declareVariable(x, CTAny.covariant) match {
-            // if the variable is a graph, declaring it will fail
-            case Right(ss) => SemanticCheckResult.error(ss, error)
-            case Left(_error) => SemanticCheckResult.error(s, _error)
-          }
+          case Left(error) =>
+            if (s.declareVariablesToSuppressDuplicateErrors) {
+              // Most of the time we want to suppress if this error occurs again, by declaring the missing variable now
+              s.declareVariable(x, CTAny.covariant) match {
+                // if the variable is a graph, declaring it will fail
+                case Right(ss) => SemanticCheckResult.error(ss, error)
+                case Left(_error) => SemanticCheckResult.error(s, _error)
+              }
+            } else {
+              // If we are ignoring errors anyway, the fake declaration might mess up the scope
+              SemanticCheckResult.error(s, error)
+            }
         }
 
       case x:FunctionInvocation =>

@@ -15,22 +15,19 @@
  */
 package org.opencypher.v9_0.frontend.phases
 
-import org.opencypher.v9_0.rewriting.rewriters.{collapseMultipleInPredicates, nameUpdatingClauses, projectFreshSortExpressions, projectNamedPaths}
+import org.opencypher.v9_0.rewriting.rewriters.{collapseMultipleInPredicates, nameUpdatingClauses, projectNamedPaths}
 import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.{Rewriter, inSequence}
 
-case object LateAstRewriting extends StatementRewriter {
+object LateAstRewriting extends StatementRewriter {
   override def instance(in: BaseState, context: BaseContext): Rewriter = {
-    val attributes = Attributes(context.astIdGen, in.positions())
-    inSequence(
-      collapseMultipleInPredicates(attributes),
-      nameUpdatingClauses(attributes),
-      projectNamedPaths(attributes),
-      //    enableCondition(containsNamedPathOnlyForShortestPath), // TODO Re-enable
-      projectFreshSortExpressions(attributes)
-    )
-  }
-
+  val attributes = Attributes(context.astIdGen, in.positions())
+  inSequence(
+  collapseMultipleInPredicates(attributes),
+    nameUpdatingClauses(attributes),
+    projectNamedPaths(attributes)
+//    enableCondition(containsNamedPathOnlyForShortestPath), // TODO Re-enable
+  )}
   override def description: String = "normalize the AST"
 
   override def postConditions: Set[Condition] = Set.empty

@@ -19,6 +19,8 @@ import org.opencypher.v9_0.ast.semantics.{SemanticState, SyntaxExceptionCreator}
 import org.opencypher.v9_0.ast.{Where, _}
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.parser.ParserFixture.parse
+import org.opencypher.v9_0.ast.{Where, _}
+import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.rewriting.rewriters.{expandStar, normalizeReturnClauses, normalizeWithClauses, projectNamedPaths}
 import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.inSequence
@@ -317,6 +319,52 @@ class ProjectNamedPathsTest extends CypherFunSuite with AstRewritingTestSupport 
         ))(pos), None, None, None)(pos)
 
     val expected: Query = Query(None, SingleQuery(List(MATCH, WITH1, WITH2, RETURN))(pos))(pos)
+
+    rewritten should equal(expected)
+  }
+
+  test("WHERE and ORDER BY on WITH clauses should be rewritten" ) {
+    val rewritten = projectionInlinedAst("MATCH p = (a) WITH a ORDER BY p WHERE length(p) = 1 RETURN a")
+
+    val aId = Variable("a")(pos)
+    val pId = Variable("p")(pos)
+
+    val MATCH =
+      Match(optional = false,
+        Pattern(List(
+          EveryPath(
+            NodePattern(Some(aId), List(), None)(pos))
+        ))(pos), List(), None)(pos)
+
+    val pathExpression = PathExpression(NodePathStep(aId, NilPathStep))(pos)
+
+    val WHERE =
+      Where(
+        Equals(
+          FunctionInvocation(FunctionName("length")(pos), pathExpression)(pos),
+          SignedDecimalIntegerLiteral("1")(pos)
+        )(pos)
+      )(pos)
+
+    val WITH =
+      With(distinct = false,
+        ReturnItems(includeExisting = false, Seq(
+          AliasedReturnItem(aId, aId)(pos)
+        ))(pos),
+        Some(OrderBy(List(AscSortItem(pathExpression)(pos)))(pos)),
+        None, None,
+        Some(WHERE)
+      )(pos)
+
+    val RETURN =
+      Return(distinct = false,
+        ReturnItems(includeExisting = false, List(
+          AliasedReturnItem(aId, aId)(pos)
+        ))(pos),
+        None, None, None
+      )(pos)
+
+    val expected: Query = Query(None, SingleQuery(List(MATCH, WITH, RETURN))(pos))(pos)
 
     rewritten should equal(expected)
   }

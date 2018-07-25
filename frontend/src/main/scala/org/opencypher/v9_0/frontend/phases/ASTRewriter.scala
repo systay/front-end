@@ -20,9 +20,10 @@ import org.opencypher.v9_0.ast.{Statement, UnaliasedReturnItem}
 import org.opencypher.v9_0.expressions.NotEquals
 import org.opencypher.v9_0.rewriting.RewriterStep._
 import org.opencypher.v9_0.rewriting.conditions._
-import org.opencypher.v9_0.rewriting.rewriters.{replaceLiteralDynamicPropertyLookups, _}
-import org.opencypher.v9_0.rewriting.{RewriterCondition, RewriterStep, RewriterStepSequencer}
+import org.opencypher.v9_0.rewriting.RewriterStep
 import org.opencypher.v9_0.util.attribution.Attributes
+import org.opencypher.v9_0.rewriting.rewriters.{replaceLiteralDynamicPropertyLookups, _}
+import org.opencypher.v9_0.rewriting.{RewriterCondition, RewriterStepSequencer}
 
 class ASTRewriter(rewriterSequencer: String => RewriterStepSequencer,
                   literalExtraction: LiteralExtraction,
@@ -36,7 +37,6 @@ class ASTRewriter(rewriterSequencer: String => RewriterStepSequencer,
       normalizeComparisons(attributes),
       enableCondition(noReferenceEqualityAmongVariables),
       enableCondition(containsNoNodesOfType[UnaliasedReturnItem]),
-      enableCondition(orderByOnlyOnVariables),
       enableCondition(noDuplicatesInReturnItems),
       expandStar(semanticState, attributes),
       enableCondition(containsNoReturnAll),

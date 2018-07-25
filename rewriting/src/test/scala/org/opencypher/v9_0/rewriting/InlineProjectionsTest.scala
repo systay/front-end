@@ -15,8 +15,10 @@
  */
 package org.opencypher.v9_0.rewriting
 
+import org.opencypher.v9_0.ast._
 import org.opencypher.v9_0.ast.semantics.{SemanticState, SyntaxExceptionCreator}
 import org.opencypher.v9_0.parser.ParserFixture.parse
+import org.opencypher.v9_0.expressions.{Add, SignedDecimalIntegerLiteral, Variable}
 import org.opencypher.v9_0.rewriting.rewriters.{expandStar, inlineProjections, normalizeReturnClauses, normalizeWithClauses}
 import org.opencypher.v9_0.util.attribution.Attributes
 import org.opencypher.v9_0.util.helpers.StringHelper.RichString
@@ -107,9 +109,7 @@ class InlineProjectionsTest extends CypherFunSuite with AstRewritingTestSupport 
 
     result should equal(parse(
       """MATCH (a)
-        |WITH a AS a
         |WITH a AS a WHERE true
-        |WITH a AS a
         |RETURN a AS a
       """.stripMargin))
   }
@@ -129,28 +129,18 @@ class InlineProjectionsTest extends CypherFunSuite with AstRewritingTestSupport 
         |RETURN x""".stripMargin))
   }
 
-  test("should inline: WITH 1 AS x RETURN 1 + x => _PRAGMA WITH NONE RETURN 1 + 1") {
+  test("should inline: WITH 1 AS x RETURN 1 + x => ... RETURN 1 + 1") {
     val result = projectionInlinedAst(
       """WITH 1 AS x
         |RETURN 1 + x
       """.stripMargin)
 
-    result should equal(ast(
-      """_PRAGMA WITH NONE
-        |RETURN 1 + 1 AS `1 + x`
-      """.stripMargin))
-  }
-
-  test("should inline: WITH 1 as b RETURN b => RETURN 1 AS `b`") {
-    val result = projectionInlinedAst(
-      """WITH 1 as b
-        |RETURN b
-      """.stripMargin)
-
-    result should equal(ast(
-      """_PRAGMA WITH NONE
-        |RETURN 1 AS `b`
-      """.stripMargin))
+    // Changing the assert to use the AST, since an empty WITH cannot be written in CYPHER
+    result should equal(Query(None,
+      SingleQuery(List(
+        With(distinct = false, ReturnItems(includeExisting = false, items = Vector())(pos), None, None, None, None)(pos),
+        Return(distinct = false, returnItems = ReturnItems(includeExisting = false, List(AliasedReturnItem(Add(SignedDecimalIntegerLiteral("1")(pos), SignedDecimalIntegerLiteral("1")(pos))(pos), Variable("1 + x")(pos))(pos)))(pos), orderBy = None, skip = None, limit = None, excludedNames = Set())(pos)
+      ))(pos))(pos))
   }
 
   test("should not inline aggregations: WITH 1 as b WITH DISTINCT b AS c RETURN c => WITH DISTINCT 1 AS c RETURN c AS c") {
@@ -160,11 +150,13 @@ class InlineProjectionsTest extends CypherFunSuite with AstRewritingTestSupport 
         |RETURN c
       """.stripMargin)
 
-    result should equal(ast(
-      """_PRAGMA WITH NONE
-        |WITH DISTINCT 1 AS `c`
-        |RETURN c AS `c`
-      """.stripMargin))
+    // Changing the assert to use the AST, since an empty WITH cannot be written in CYPHER
+    result should equal(Query(None,
+      SingleQuery(List(
+        With(distinct = false, ReturnItems(includeExisting = false, items = Vector())(pos), None, None, None, None)(pos),
+        With(distinct = true, ReturnItems(includeExisting = false, items = List(AliasedReturnItem(SignedDecimalIntegerLiteral("1")(pos), Variable("c")(pos))(pos)))(pos), None, None, None, None)(pos),
+        Return(distinct = false, returnItems = ReturnItems(includeExisting = false, items = List(AliasedReturnItem(Variable("c")(pos), Variable("c")(pos))(pos)))(pos), orderBy = None, skip = None, limit = None, excludedNames = Set())(pos)
+      ))(pos))(pos))
   }
 
   test("should not inline variables into patterns: WITH {node} as a MATCH (a) RETURN a => WITH {node} as a MATCH (a) RETURN a AS `a`") {
@@ -188,14 +180,16 @@ class InlineProjectionsTest extends CypherFunSuite with AstRewritingTestSupport 
         |RETURN m
       """.stripMargin)
 
-    result should equal(ast(
-      """_PRAGMA WITH NONE
-        |_PRAGMA WITH NONE
-        |RETURN 1+1 as `m`
-      """.stripMargin))
+    // Changing the assert to use the AST, since an empty WITH cannot be written in CYPHER
+    result should equal(Query(None,
+      SingleQuery(List(
+        With(distinct = false, ReturnItems(includeExisting = false, items = Vector())(pos), None, None, None, None)(pos),
+        With(distinct = false, ReturnItems(includeExisting = false, items = Vector())(pos), None, None, None, None)(pos),
+        Return(distinct = false, returnItems = ReturnItems(includeExisting = false, items = List(AliasedReturnItem(Add(SignedDecimalIntegerLiteral("1")(pos),SignedDecimalIntegerLiteral("1")(pos))(pos), Variable("m")(pos))(pos)))(pos), orderBy = None, skip = None, limit = None, excludedNames = Set())(pos)
+      ))(pos))(pos))
   }
 
-  test("should inline node patterns: MATCH (a) WITH a as b MATCH (b) RETURN b => MATCH (a) _PRAGMA WITH NONE MATCH (a) RETURN a as `b`") {
+  test("should inline node patterns: MATCH (a) WITH a as b MATCH (b) RETURN b => MATCH (a) WITH a AS a MATCH (a) RETURN a as `b`") {
     val result = projectionInlinedAst(
       """MATCH (a)
         |WITH a as b
@@ -211,7 +205,7 @@ class InlineProjectionsTest extends CypherFunSuite with AstRewritingTestSupport 
       """.stripMargin))
   }
 
-  test("should inline relationship patterns: MATCH ()-[a]->() WITH a as b MATCH ()-[b]->() RETURN b => MATCH ()-[a]->() _PRAGMA WITH NONE MATCH ()-[a]->() RETURN a as `b`") {
+  test("should inline relationship patterns: MATCH ()-[a]->() WITH a as b MATCH ()-[b]->() RETURN b => MATCH ()-[a]->() WITH a AS a MATCH ()-[a]->() RETURN a as `b`") {
     val result = projectionInlinedAst(
       """MATCH ()-[a]->()
         |WITH a as b
@@ -342,9 +336,7 @@ class InlineProjectionsTest extends CypherFunSuite with AstRewritingTestSupport 
       """MATCH (owner)
         |WITH owner AS `owner`, COUNT(*) AS xyz
         |WITH owner AS `owner`, xyz AS `xyz`
-        |WITH owner AS `owner`, xyz AS `xyz`, owner AS `owner`
         |WHERE (owner)--()
-        |WITH xyz AS `xyz`, owner AS `owner`
         |RETURN owner AS `owner`
       """.stripMargin))
   }
@@ -355,10 +347,12 @@ class InlineProjectionsTest extends CypherFunSuite with AstRewritingTestSupport 
         |RETURN b
       """.stripMargin)
 
-    result should equal(ast(
-      """_PRAGMA WITH NONE
-        |RETURN 1 AS b
-      """.stripMargin))
+    // Changing the assert to use the AST, since an empty WITH cannot be written in CYPHER
+    result should equal(Query(None,
+      SingleQuery(List(
+        With(distinct = false, ReturnItems(includeExisting = false, items = Vector())(pos), None, None, None, None)(pos),
+        Return(distinct = false, returnItems = ReturnItems(includeExisting = false, List(AliasedReturnItem(SignedDecimalIntegerLiteral("1")(pos), Variable("b")(pos))(pos)))(pos), orderBy = None, skip = None, limit = None, excludedNames = Set())(pos)
+      ))(pos))(pos))
   }
 
   test("match (n) where id(n) IN [0,1,2,3] with n.division AS `n.division`, max(n.age) AS `max(n.age)` with `n.division` AS `n.division`, `max(n.age)` AS `max(n.age)` RETURN `n.division` AS `n.division`, `max(n.age)` AS `max(n.age)` order by `max(n.age)`") {

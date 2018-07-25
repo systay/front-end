@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.opencypher.v9_0.frontend.prettifier
+package org.opencypher.v9_0.ast.prettifier
 
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.util.InternalException

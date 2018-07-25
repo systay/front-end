@@ -17,6 +17,8 @@ package org.opencypher.v9_0.rewriting.rewriters
 
 import org.opencypher.v9_0.ast.{AliasedReturnItem, With}
 import org.opencypher.v9_0.expressions
+import org.opencypher.v9_0.ast.{AliasedReturnItem, ProjectionClause}
+import org.opencypher.v9_0.expressions
 import org.opencypher.v9_0.expressions._
 import org.opencypher.v9_0.util.Foldable.FoldableAny
 import org.opencypher.v9_0.util.attribution.Attributes
@@ -32,19 +34,19 @@ case class projectNamedPaths(attributes: Attributes) extends Rewriter {
 
     self =>
 
-    def withoutNamedPaths = copy(paths = Map.empty)
-    def withProtectedVariable(ident: Ref[LogicalVariable]) = copy(protectedVariables = protectedVariables + ident)
-    def withNamedPath(entry: (Variable, PathExpression)) = copy(paths = paths + entry)
-    def withRewrittenVariable(entry: (Ref[LogicalVariable], PathExpression)) = {
+    def withoutNamedPaths: Projectibles = copy(paths = Map.empty)
+    def withProtectedVariable(ident: Ref[LogicalVariable]): Projectibles = copy(protectedVariables = protectedVariables + ident)
+    def withNamedPath(entry: (Variable, PathExpression)): Projectibles = copy(paths = paths + entry)
+    def withRewrittenVariable(entry: (Ref[LogicalVariable], PathExpression)): Projectibles = {
       val (ref, pathExpr) = entry
       copy(variableRewrites = variableRewrites + (ref -> pathExpr.endoRewrite(copyVariables(attributes))))
     }
 
-    def returnItems = paths.map {
+    def returnItems: IndexedSeq[AliasedReturnItem] = paths.map {
       case (ident, pathExpr) => AliasedReturnItem(pathExpr, ident)(ident.position)(attributes.copy(ident.id))
     }.toIndexedSeq
 
-    def withVariableRewritesForExpression(expr: Expression) =
+    def withVariableRewritesForExpression(expr: Expression): Projectibles =
       expr.treeFold(self) {
         case ident: Variable =>
           acc =>
@@ -63,7 +65,7 @@ case class projectNamedPaths(attributes: Attributes) extends Rewriter {
     val Projectibles(paths, protectedVariables, variableRewrites) = collectProjectibles(input)
     val applicator = Rewriter.lift {
 
-      case (ident: Variable) if !protectedVariables(Ref(ident)) =>
+      case ident: Variable if !protectedVariables(Ref(ident)) =>
         variableRewrites.getOrElse(Ref(ident), ident)
 
       case namedPart@NamedPatternPart(_, _: ShortestPaths) =>
@@ -103,12 +105,12 @@ case class projectNamedPaths(attributes: Attributes) extends Rewriter {
     // TODO: Pull out common subexpressions for path expr using WITH *, ... and run expand star again
     // TODO: Plan level rewriting to delay computation of unused projections
 
-    case projection: With =>
+    case projection: ProjectionClause =>
       acc =>
         val projectedAcc = projection.returnItems.items.map(_.expression).foldLeft(acc) {
           (acc, expr) => acc.withVariableRewritesForExpression(expr)
         }
-        (projectedAcc.withoutNamedPaths, Some(identity))
+        (projectedAcc, Some(_.withoutNamedPaths))
 
     case NamedPatternPart(_, part: ShortestPaths) =>
       acc => (acc, Some(identity))
