@@ -584,7 +584,7 @@ class NormalizeWithClausesTest extends CypherFunSuite with RewriteTest with AstC
   }
 
   test("match (n) with n as n order by max(n) return n") {
-    evaluating { rewriting("match (n) with n as n order by max(n) return n") } should produce[SyntaxException]
+    a [SyntaxException] should be thrownBy { rewriting("match (n) with n as n order by max(n) return n") }
   }
 
   protected override def assertRewrite(originalQuery: String, expectedQuery: String) {

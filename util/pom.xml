@@ -4,7 +4,6 @@
     <groupId>org.opencypher</groupId>
     <artifactId>front-end-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <relativePath>../</relativePath>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -36,6 +35,17 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <configuration>
+          <args combine.children="append">
+            <arg>-language:implicitConversions</arg>
+            <arg>-language:existentials</arg>
+            <arg>-language:postfixOps</arg>
+          </args>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.scalastyle</groupId>
         <artifactId>scalastyle-maven-plugin</artifactId>

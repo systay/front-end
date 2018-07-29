@@ -28,15 +28,15 @@ object Expression {
 
   val DefaultTypeMismatchMessageGenerator = (expected: String, existing: String) => s"expected $expected but was $existing"
 
-  final case class TreeAcc[A](data: A, stack: Stack[Set[LogicalVariable]] = Stack.empty) {
+  final case class TreeAcc[A](data: A, stack: List[Set[LogicalVariable]] = List.empty) {
     def mapData(f: A => A): TreeAcc[A] = copy(data = f(data))
 
     def inScope(variable: LogicalVariable) = stack.exists(_.contains(variable))
     def variablesInScope: Set[LogicalVariable] = stack.toSet.flatten
 
     def pushScope(newVariable: LogicalVariable): TreeAcc[A] = pushScope(Set(newVariable))
-    def pushScope(newVariables: Set[LogicalVariable]): TreeAcc[A] = copy(stack = stack.push(newVariables))
-    def popScope: TreeAcc[A] = copy(stack = stack.pop)
+    def pushScope(newVariables: Set[LogicalVariable]): TreeAcc[A] = copy(stack = newVariables :: stack)
+    def popScope: TreeAcc[A] = copy(stack = stack.tail)
   }
 
   def mapExpressionHasPropertyReadDependency(mapEntityName: String, mapExpression: Expression): Boolean =
@@ -84,7 +84,7 @@ abstract class Expression extends ASTNode {
       case scope: ScopeExpression =>
         acc =>
           val newAcc = acc.pushScope(scope.introducedVariables)
-          (newAcc, Some((x) => x.popScope))
+          (newAcc, Some(x => x.popScope))
       case id: LogicalVariable => acc => {
         val newAcc = if (acc.inScope(id)) acc else acc.mapData(_ + id)
         (newAcc, Some(identity))
@@ -98,7 +98,7 @@ abstract class Expression extends ASTNode {
       case scope: ScopeExpression => {
         case acc =>
           val newAcc = acc.pushScope(scope.introducedVariables)
-          (newAcc, Some((x) => x.popScope))
+          (newAcc, Some(x => x.popScope))
       }
       case occurrence: Variable if occurrence.name == variable.name => acc => {
         val newAcc = if (acc.inScope(occurrence)) acc else acc.mapData(_ + Ref(occurrence))
@@ -123,7 +123,7 @@ abstract class Expression extends ASTNode {
         acc =>
           val newAcc = acc.pushScope(scope.introducedVariables)
             .mapData(pairs => pairs :+ (scope -> acc.variablesInScope))
-          (newAcc, Some((x) => x.popScope))
+          (newAcc, Some(x => x.popScope))
 
       case expr: Expression =>
         acc =>
