@@ -185,7 +185,8 @@ class TypeJudgementGenerator(types: TypeJudgements,
       case x: BooleanLiteral => setNotNullable(x, BoolT)
 
       case x: SemanticCheckableExpression => ???
-      case x => throw new NotImplementedError(x.toString)
+      case x: Expression => throw new NotImplementedError(x.toString)
+      case _ =>
     }
   } catch {
     case error: Exception =>
