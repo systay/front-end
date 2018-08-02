@@ -22,7 +22,7 @@ import org.opencypher.v9_0.util.ASTNode
 import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
-class TreeWalkerTest extends CypherFunSuite {
+class TreeWalkerTest extends CypherFunSuite with AstConstructionTestSupport {
   val binder = mock[VariableBinder]
 
   test("should visit things in the correct order") {
@@ -64,5 +64,45 @@ class TreeWalkerTest extends CypherFunSuite {
       classOf[Return],
       classOf[ReturnItems])
     )
+  }
+
+  test("should set correct variable contexts") {
+    // GIVEN
+    val scoper = new Scoping {
+      override def scope(ast: ASTNode, incoming: Scope): ScopingResult = ScopingResult(None, None)
+    }
+
+    case object AddContext extends VariableContext
+    case object AContext extends VariableContext
+    case object BContext extends VariableContext
+
+    val binder = new VariableBinding {
+      override def bind(ast: ASTNode, variableContext: VariableContext): VariableContext = ast match {
+        case _:Add =>
+          variableContext should equal(ReferenceOnly) // the initial context
+          AddContext
+        case Variable(name) if name == "a" =>
+          variableContext should equal(AddContext)
+          AContext
+        case Variable(name) if name == "b" =>
+          variableContext should equal(AddContext)
+          BContext
+
+      }
+    }
+
+    val checkingBottomUp = new BottomUpVisitor {
+      override def visit(ast: ASTNode, variableContext: VariableContext): Unit = ast match {
+        case _:Add =>
+          variableContext should equal(ReferenceOnly) // the initial context
+        case Variable(name) =>
+          variableContext should equal(AddContext)
+
+      }
+    }
+    val statement = Add(varFor("a"), varFor("b"))(pos)
+
+    // WHEN
+    new TreeWalker(scoper, binder, mock[TypeExpecting], checkingBottomUp).visit(statement)
   }
 }

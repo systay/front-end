@@ -36,7 +36,7 @@ class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends
   private val rememberToReferenceOrDeclare = new mutable.HashSet[Id]()
 
 
-  override def bind(obj: ASTNode, bindingMode: BindingMode): BindingMode = {
+  override def bind(obj: ASTNode, variableContext: VariableContext): VariableContext = {
     def declareVar(v: LogicalVariable): Unit =
       scopes.optionalGet(v.id) match {
         case None =>
@@ -63,27 +63,27 @@ class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends
           }
       }
 
-    (obj, bindingMode) match {
+    (obj, variableContext) match {
       case (m: Match, _) =>
-        BindingAllowed(m.optional)
+        InMatch(m.optional)
 
       case (_: Create|_:Merge, _) =>
-        RelationshipBindingOnly
+        InMergeOrCreate
 
       case (ast: LogicalVariable, _) if rememberToDeclare(ast.id) =>
         declareVar(ast)
-        bindingMode
+        variableContext
 
       case (ast: LogicalVariable, _) if rememberToReferenceOrDeclare(ast.id) =>
         referenceOrDeclare(ast)
-        bindingMode
+        variableContext
 
       case (ast: LogicalVariable, _) if variableBindings.contains(ast.id) =>
-        bindingMode
+        variableContext
 
-      case (ast: LogicalVariable, _: BindingAllowed) =>
+      case (ast: LogicalVariable, _: InMatch) =>
         referenceOrDeclare(ast)
-        bindingMode
+        variableContext
 
       case (ast: LogicalVariable, ReferenceOnly) =>
         val scope = scopes.get(ast.id)
@@ -93,21 +93,21 @@ class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends
           case None =>
             throw new VariableNotDeclaredError(ast)
         }
-        bindingMode
+        variableContext
 
       case (unwind: Unwind, _) =>
         declareVar(unwind.variable)
-        bindingMode
+        variableContext
 
       case (load: LoadCSV, _) =>
         declareVar(load.variable)
-        bindingMode
+        variableContext
 
       case (foreach: Foreach, _) =>
         declareVar(foreach.variable)
-        bindingMode
+        variableContext
 
-      case (relationshipChain: RelationshipChain, RelationshipBindingOnly) =>
+      case (relationshipChain: RelationshipChain, InMergeOrCreate) =>
         relationshipChain.relationship.variable.foreach(declareVar)
         relationshipChain.rightNode.variable.foreach(referenceOrDeclare)
         relationshipChain.element match {
@@ -116,25 +116,22 @@ class VariableBinder(variableBindings: VariableBindings, scopes: Scopes) extends
           case relationship: RelationshipChain =>
             relationship.variable.foreach(declareVar)
         }
-        bindingMode
+        variableContext
 
-      case (NodePattern(Some(variable), _, _, _), RelationshipBindingOnly)
+      case (NodePattern(Some(variable), _, _, _), InMergeOrCreate)
         if !variableBindings.contains(variable.id) && !rememberToReferenceOrDeclare(variable.id) =>
         declareVar(variable)
-        bindingMode
+        variableContext
 
       case (as: AliasedReturnItem, _) =>
         declareVar(as.variable)
-        bindingMode
-
-      case (_: Create | _: Merge, _) =>
-        RelationshipBindingOnly
+        variableContext
 
       case (_: SetLabelItem | _: SetPropertyItem | _: MapExpression, _) =>
         ReferenceOnly
 
       case _ =>
-        bindingMode
+        variableContext
     }
   }
 }

@@ -24,7 +24,7 @@ import org.opencypher.v9_0.util.attribution.Attribute
   * Type errors can still occur, but that would be runtime checks and not something we can detect at this stage.
   */
 class TypeChecker(typeExpectations: TypeExpectations, typeJudgements: TypeJudgements) extends BottomUpVisitor {
-  override def visit(node: ASTNode): Unit = node match {
+  override def visit(node: ASTNode, variableContext: VariableContext): Unit = node match {
     case e: Expression =>
       val expected: TypeInfo = getTypeOf(e, typeExpectations)
       val judged: TypeInfo = getTypeOf(e, typeJudgements)

@@ -27,10 +27,10 @@ object SemanticTestHelper {
     override def scope(ast: ASTNode, incoming: Scope): ScopingResult = ScopingResult(None, None)
   }
   def mockBinding: VariableBinding = new VariableBinding {
-    override def bind(ast: ASTNode, bindingMode: BindingMode): BindingMode = ReferenceOnly
+    override def bind(ast: ASTNode, bindingMode: VariableContext): VariableContext = ReferenceOnly
   }
   def mockTypeExpectations: TypeExpecting = new TypeExpecting {
-    override def visit(ast: ASTNode, bindingMode: BindingMode): Unit = {}
+    override def visit(ast: ASTNode, bindingMode: VariableContext): Unit = {}
   }
 }
 

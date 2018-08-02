@@ -26,7 +26,7 @@ import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 class ScopingTest extends CypherFunSuite {
 
   val binder = mock[VariableBinder]
-  when(binder.bind(any(), any())).thenReturn(BindingAllowed(false))
+  when(binder.bind(any(), any())).thenReturn(InMatch(false))
   val typeExpecting = mock[TypeExpecting]
   val typer = mock[BottomUpVisitor]
 

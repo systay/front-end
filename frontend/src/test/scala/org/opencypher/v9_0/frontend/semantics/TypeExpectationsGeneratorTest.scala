@@ -22,7 +22,7 @@ import org.opencypher.v9_0.parser.CypherParser
 import org.opencypher.v9_0.util.attribution.SequentialIdGen
 import org.opencypher.v9_0.util.test_helpers.CypherFunSuite
 
-class TypeExpectationsTest extends CypherFunSuite {
+class TypeExpectationsGeneratorTest extends CypherFunSuite {
 
   def parseAndAnalyse(q: String): (TypeExpectations, Statement) = {
     val x = CypherParser.parse(q, new SequentialIdGen())

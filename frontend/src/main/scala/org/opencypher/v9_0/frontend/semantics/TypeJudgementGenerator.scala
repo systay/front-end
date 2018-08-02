@@ -28,7 +28,7 @@ class TypeJudgementGenerator(types: TypeJudgements,
                              bindingsLookup: BindingsLookup,
                              expectations: TypeExpectations) extends BottomUpVisitor {
 
-  override def visit(e: ASTNode): Unit = try {
+  override def visit(e: ASTNode, variableContext: VariableContext): Unit = try {
     e match {
       // For a variable declaration, the type is whatever is expected
       case v: LogicalVariable if bindingsLookup.isDeclaration(v) =>

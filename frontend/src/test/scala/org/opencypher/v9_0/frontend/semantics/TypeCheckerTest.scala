@@ -34,7 +34,7 @@ class TypeCheckerTest extends CypherFunSuite with AstConstructionTestSupport {
     val typer = new TypeJudgementGenerator(judgements, mock[BindingsLookup], expectations)
     val typeChecker = new TypeChecker(expectations, judgements)
     val binder = mock[VariableBinder]
-    when(binder.bind(any(), any())).thenReturn(BindingAllowed(false))
+    when(binder.bind(any(), any())).thenReturn(InMatch(false))
     val scoping = mock[Scoping]
     when(scoping.scope(any(), any())).thenReturn(ScopingResult(None, None))
     val walker = new TreeWalker(scoping, binder, expector, typer andThen typeChecker)

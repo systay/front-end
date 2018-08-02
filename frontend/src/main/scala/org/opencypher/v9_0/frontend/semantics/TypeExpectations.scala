@@ -68,9 +68,9 @@ class TypeExpectationsGenerator(typeExpectations: TypeExpectations, types: TypeJ
 
   val no_expectations = new TypeInfo(Types.ANY, true)
 
-  override def visit(ast: ASTNode, bindingMode: BindingMode): Unit = {
+  override def visit(ast: ASTNode, bindingMode: VariableContext): Unit = {
     val nullable = bindingMode match {
-      case BindingAllowed(x) => x
+      case InMatch(x) => x
       case _                 => false
     }
     ast match {
@@ -270,7 +270,7 @@ class TypeExpectationsAfterJudgements(typeExpectations: TypeExpectations, typeJu
 
   val temporalTypes: Set[NewCypherType] = Set(DateT, TimeT, DateTimeT, LocalDateT, LocalTimeT)
 
-  override def visit(e: ASTNode): Unit = e match {
+  override def visit(e: ASTNode, variableContext: VariableContext): Unit = e match {
     case Add(lhs, rhs) =>
       val lhsType: TypeInfo = typeJudgements.get(lhs.id)
 

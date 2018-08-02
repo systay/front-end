@@ -15,7 +15,6 @@
  */
 package org.opencypher.v9_0.frontend.semantics
 
-import org.opencypher.v9_0.expressions.Expression
 import org.opencypher.v9_0.util.ASTNode
 import org.opencypher.v9_0.util.Foldable._
 import org.opencypher.v9_0.util.attribution.Attribute.DEBUG
@@ -40,24 +39,23 @@ class TreeWalker(scoping: Scoping,
       println(TreeWithId2String.toString(astRoot))
     }
     val todo = new mutable.ArrayStack[Move]()
-    todo.push(Down(astRoot))
+    todo.push(Down(astRoot, ReferenceOnly))
     val scopeForEntireQuery = new NormalScope()
 
     var currentScope = scopeForEntireQuery.createInnerScope()
-    var currentBindingMode: BindingMode = ReferenceOnly
 
-    def analysisGoingDown(ast: ASTNode): Unit = {
+    def analysisGoingDown(ast: ASTNode, varContext: VariableContext): VariableContext = {
       debugPrint("DOWN", ast)
-      val bindingMode = currentBindingMode
 
       val scopingResult = scoping.scope(ast, currentScope)
-      todo.push(Up(ast, scopingResult.comingUpScope, bindingMode))
-      currentBindingMode = variableBinding.bind(ast, bindingMode)
-      typeExpecting.visit(ast, bindingMode)
+      todo.push(Up(ast, scopingResult.comingUpScope, varContext))
+      val newVarContext = variableBinding.bind(ast, varContext)
+      typeExpecting.visit(ast, varContext)
 
       scopingResult.changeCurrentScopeTo.foreach { s =>
         currentScope = s
       }
+      newVarContext
     }
 
 
@@ -65,30 +63,29 @@ class TreeWalker(scoping: Scoping,
       val currentNode = todo.pop()
 
       currentNode match {
-        case Down(obj) =>
-          obj match {
-            case node: ASTNode => analysisGoingDown(node)
-            case _ =>
-          }
+        case Down(obj, varContext) =>
+          val childContext =
+            obj match {
+              case node: ASTNode => analysisGoingDown(node, varContext)
+              case _ => varContext
+            }
 
           obj.reverseChildren.foreach { child =>
-            todo.push(Down(child))
+            todo.push(Down(child, childContext))
           }
 
 
-        case Up(node, maybeScope, bindingMode) =>
+        case Up(node, maybeScope, varContext) =>
           debugPrint("UP", node)
           maybeScope.foreach { s =>
             currentScope = s
           }
 
           node match {
-            case e: Expression =>
-                bottomUpVisitor.visit(e)
+            case e: ASTNode =>
+                bottomUpVisitor.visit(e, varContext)
             case _ =>
           }
-
-          currentBindingMode = bindingMode
       }
     }
   }
@@ -104,8 +101,8 @@ class TreeWalker(scoping: Scoping,
 }
 
 trait Move
-case class Down(data: AnyRef) extends Move
-case class Up(data: ASTNode, s: Option[Scope], v: BindingMode) extends Move
+case class Down(data: AnyRef, v: VariableContext) extends Move
+case class Up(data: ASTNode, s: Option[Scope], v: VariableContext) extends Move
 
 
 case class ScopingResult(changeCurrentScopeTo: Option[Scope], comingUpScope: Option[Scope])
@@ -115,29 +112,29 @@ trait Scoping {
 }
 
 trait VariableBinding {
-  def bind(ast: ASTNode, bindingMode: BindingMode): BindingMode
+  def bind(ast: ASTNode, variableContext: VariableContext): VariableContext
 }
 
 trait TypeExpecting {
-  def visit(ast: ASTNode, bindingMode: BindingMode): Unit
+  def visit(ast: ASTNode, variableContext: VariableContext): Unit
 }
 
 trait BottomUpVisitor {
   self =>
 
-  def visit(e: ASTNode): Unit
+  def visit(e: ASTNode, variableContext: VariableContext): Unit
 
   def andThen(other: BottomUpVisitor): BottomUpVisitor = new BottomUpVisitor {
-    override def visit(e: ASTNode): Unit = {
-      self.visit(e)
-       other.visit(e)
+    override def visit(e: ASTNode, variableContext: VariableContext): Unit = {
+      self.visit(e, variableContext)
+      other.visit(e, variableContext)
     }
   }
 }
 
-
-// When visiting the tree, we need to sometimes remember if
-trait BindingMode
-case class BindingAllowed(nullable: Boolean) extends BindingMode
-case object ReferenceOnly extends BindingMode
-case object RelationshipBindingOnly extends BindingMode
+// When visiting the tree, we need to remember the context of a variable to decide
+// if e.g. it is be a declaration or a reference
+trait VariableContext
+case class InMatch(nullable: Boolean) extends VariableContext
+case object ReferenceOnly extends VariableContext
+case object InMergeOrCreate extends VariableContext
