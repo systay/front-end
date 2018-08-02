@@ -83,12 +83,7 @@ class Scoper(scopes: Scopes) extends Scoping {
 
 }
 
-object Scope {
-  val idGen = new SequentialIdGen
-}
-
 trait Scope {
-  val id = Scope.idGen.id()
   def getVariable(name: String): Option[LogicalVariable]
   def createInnerScope(): Scope
   def addVariable(v: LogicalVariable): Unit
@@ -109,7 +104,7 @@ class BiScope(val firstScope: Scope, val secondScope: Scope) extends Scope {
 
   override def createInnerScope(): Scope = new NormalScope(Some(this))
 
-  override def toString = s"BiScope${id.x}($firstScope, $secondScope)"
+  override def toString = s"BiScope($firstScope, $secondScope)"
 
   override def addVariable(v: LogicalVariable): Unit = throw new InternalException("can't add variables to a BiScope")
 
@@ -140,9 +135,15 @@ class NormalScope(parent: Option[Scope] = None, var locals: Set[LogicalVariable]
     locals += newVar
   }
 
+  var name: Option[String] = None
+  def withName(name: String): NormalScope = {
+    this.name = Some(name)
+    this
+  }
+
   override def toString: String = {
     val parentS = parent.map(_.toString).getOrElse("")
-    s"Scope${id.x}"
+    s"${parentS}Scope(${name.getOrElse("")})"
   }
 
   override def popScope(): Scope = parent.getOrElse(throw new InternalException("have no scope to pop at this location"))

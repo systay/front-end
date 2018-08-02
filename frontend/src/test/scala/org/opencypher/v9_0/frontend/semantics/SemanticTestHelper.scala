@@ -32,6 +32,9 @@ object SemanticTestHelper {
   def mockTypeExpectations: TypeExpecting = new TypeExpecting {
     override def visit(ast: ASTNode, bindingMode: VariableContext): Unit = {}
   }
+  def mockBottomUpVisitor: BottomUpVisitor = new BottomUpVisitor {
+    override def visit(e: ASTNode, variableContext: VariableContext): Unit = {}
+  }
 }
 
 trait BinaryOpSemanticTest {

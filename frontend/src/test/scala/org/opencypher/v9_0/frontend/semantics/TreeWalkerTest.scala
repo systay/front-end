@@ -65,7 +65,6 @@ class TreeWalkerTest extends CypherFunSuite with AstConstructionTestSupport {
       classOf[ReturnItems])
     )
   }
-
   test("should set correct variable contexts") {
     // GIVEN
     val scoper = new Scoping {
@@ -105,4 +104,74 @@ class TreeWalkerTest extends CypherFunSuite with AstConstructionTestSupport {
     // WHEN
     new TreeWalker(scoper, binder, mock[TypeExpecting], checkingBottomUp).visit(statement)
   }
+
+  test("should set correct scope") {
+    // GIVEN
+    val foreachChildScope = new NormalScope().withName("foreachChildScope")
+    val withSiblingScope = new NormalScope().withName("withSiblingScope")
+    var initialScope: Scope = null
+
+    val scoper = new Scoping {
+      override def scope(ast: ASTNode, incoming: Scope): ScopingResult =
+        ast match {
+          case Property(Variable("head"), _) =>
+            initialScope = incoming.asInstanceOf[NormalScope].withName("InitialScope")
+            ScopingResult(None, None)
+
+          case Variable("head") =>
+            incoming should be theSameInstanceAs initialScope
+            ScopingResult(None, None)
+
+          case Property(Variable("with"), _) =>
+            incoming should be theSameInstanceAs initialScope
+            ScopingResult(None, Some(withSiblingScope))
+
+          case Variable("with") =>
+            incoming should be theSameInstanceAs initialScope
+            ScopingResult(None, None)
+
+          case Property(Variable("match"), _) =>
+            incoming should be theSameInstanceAs withSiblingScope
+            ScopingResult(None, None)
+
+          case Variable("match") =>
+            incoming should be theSameInstanceAs withSiblingScope
+            ScopingResult(None, None)
+
+          case Property(Variable("foreach"), _) =>
+            incoming should be theSameInstanceAs withSiblingScope
+            ScopingResult(Some(foreachChildScope), Some(incoming))
+
+          case Variable("foreach") =>
+            incoming should be theSameInstanceAs foreachChildScope
+            ScopingResult(None, None)
+
+          case Property(Variable("last"), _) =>
+            incoming should be theSameInstanceAs withSiblingScope
+            ScopingResult(None, None)
+
+          case Variable("last") =>
+            incoming should be theSameInstanceAs withSiblingScope
+            ScopingResult(None, None)
+
+          case _ =>
+            ScopingResult(None, None)
+        }
+    }
+
+    val binder = SemanticTestHelper.mockBinding
+    val checkingBottomUp = SemanticTestHelper.mockBottomUpVisitor
+
+    val statement = ListLiteral(Seq(
+      prop("head", "noScopeChange"),
+      prop("with", "newScopeForSiblings"),
+      prop("match", "noScopeChange"),
+      prop("foreach", "newScopeForChildren"),
+      prop("last", "noScopeChange")
+    ))(pos)
+
+    // WHEN
+    new TreeWalker(scoper, binder, mock[TypeExpecting], checkingBottomUp).visit(statement)
+  }
+
 }

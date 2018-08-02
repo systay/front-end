@@ -143,4 +143,19 @@ class ScopingTest extends CypherFunSuite {
     intScope.popScope() should equal(strScope.popScope())
   }
 
+  test("FOREACH does not leak variable") {
+    val (scopes, statement) = parseAndAnalyse(
+      """FOREACH(x IN [1,2,3] | CREATE ({prop: x}))
+        |RETURN 123
+      """.stripMargin)
+
+    val returnClause = statement.findByClass[Return]
+    val createClause = statement.findByClass[Create]
+
+    val returnScope = scopes.get(returnClause.id)
+    val foreachChildrenScope = scopes.get(createClause .id)
+
+    returnScope should not equal(foreachChildrenScope)
+  }
+
 }
